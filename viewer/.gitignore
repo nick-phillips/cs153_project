@@ -1,0 +1,3 @@
+# Un-ignore src/lib/ (root .gitignore has a blanket lib/ pattern for Python packaging)
+!src/lib/
+!src/lib/**
