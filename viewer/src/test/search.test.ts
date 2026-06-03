@@ -32,9 +32,26 @@ describe('search', () => {
     expect(r[0].entry.id).toBe('C2');
   });
 
-  it('fuzzy-matches a gene typo', () => {
+  it('fuzzy-matches a gene typo only as a fallback', () => {
     const r = search(makeFuse(entries), 'MDM5', entries);
     expect(r.map((x) => x.entry.id)).toContain('C1');
+  });
+
+  it('matches a gene prefix as a strict substring (no fuzzy bleed)', () => {
+    // "KRT" is a substring of C1's gene KRT20 and unrelated to C2 — so C2 must
+    // not appear via approximate matching.
+    const r = search(makeFuse(entries), 'KRT', entries);
+    expect(r.map((x) => x.entry.id)).toEqual(['C1']);
+  });
+
+  it('does not return unrelated entries for a short fragment', () => {
+    // "OPIOID" is C1's MOA; C2 (STEROL) must not fuzzy-match.
+    const r = search(makeFuse(entries), 'OPIOID', entries);
+    expect(r.map((x) => x.entry.id)).toEqual(['C1']);
+  });
+
+  it('returns nothing for a query that neither matches nor nearly matches', () => {
+    expect(search(makeFuse(entries), 'ZZZQQQ', entries)).toEqual([]);
   });
 
   it('returns all entries for an empty query', () => {
