@@ -5,6 +5,9 @@ import json
 from .prompts import REPORT_TOOL
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
+# A full multi-hypothesis report with evidence is large; cap generously so the
+# forced submit_report JSON is never truncated (truncation -> unparseable -> empty).
+MAX_TOKENS = 16000
 
 
 def _content_blocks(message):
@@ -34,7 +37,7 @@ def run_agent(client, registry, system_prompt: str, seed_context: str,
 
     while used < max_tool_calls:
         resp = client.messages.create(
-            model=model, max_tokens=4096, system=system, tools=tools, messages=messages,
+            model=model, max_tokens=MAX_TOKENS, system=system, tools=tools, messages=messages,
         )
         blocks = _content_blocks(resp)
         messages.append({"role": "assistant", "content": blocks})
@@ -77,7 +80,7 @@ def run_agent(client, registry, system_prompt: str, seed_context: str,
     # Force the model to emit the report tool on this final turn, so a budget
     # exhaustion always yields a real report rather than an empty fallback.
     resp = client.messages.create(
-        model=model, max_tokens=4096, system=system, tools=tools, messages=messages,
+        model=model, max_tokens=MAX_TOKENS, system=system, tools=tools, messages=messages,
         tool_choice={"type": "tool", "name": "submit_report"},
     )
     for b in _content_blocks(resp):
