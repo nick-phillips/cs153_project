@@ -27,6 +27,15 @@ def test_feature_response(tmp_path):
     assert _is_png(out)
 
 
+def test_two_feature_response(tmp_path):
+    rng = np.random.default_rng(3)
+    a = pd.Series(rng.normal(size=50), name="GE_A")
+    b = pd.Series(rng.normal(size=50), name="GE_B")
+    resp = pd.Series(rng.normal(size=50), name="BRD:TEST-1")
+    out = plots.two_feature_response(a, b, resp, "GE_A", "GE_B", "BRD:TEST-1", tmp_path / "tf.png")
+    assert _is_png(out)
+
+
 def test_feature_panel(tmp_path):
     rng = np.random.default_rng(1)
     df = pd.DataFrame({"GE_AAA": rng.normal(size=50), "GE_BBB": rng.normal(size=50),

@@ -38,10 +38,17 @@ def _tools(tmp_path, synthetic_data):
 def test_make_figure_tools_names(tmp_path, synthetic_data):
     tools, _ = _tools(tmp_path, synthetic_data)
     assert {
-        "plot_feature_response", "plot_feature_panel", "plot_dependency_distribution",
-        "plot_codependency_bar", "plot_passing_importance", "plot_string_network",
-        "plot_mutation_frequency", "plot_pathway_membership",
+        "plot_feature_response", "plot_two_feature_response", "plot_feature_panel",
+        "plot_dependency_distribution", "plot_codependency_bar", "plot_passing_importance",
+        "plot_string_network", "plot_mutation_frequency", "plot_pathway_membership",
     } == set(tools)
+
+
+def test_two_feature_response_tool(tmp_path, synthetic_data):
+    tools, out = _tools(tmp_path, synthetic_data)
+    res = tools["plot_two_feature_response"].run({"feature_a": "GE_AAA", "feature_b": "GE_CCC"})
+    assert res["figure"].startswith("figures/")
+    assert _png_ok(out, res["figure"])
 
 
 def test_feature_response_tool(tmp_path, synthetic_data):

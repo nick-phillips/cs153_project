@@ -123,3 +123,16 @@ def test_report_schema_has_figures():
     hyp = prompts.REPORT_TOOL["input_schema"]["properties"]["hypotheses"]["items"]
     assert "figures" in hyp["properties"]
     assert "figures" not in hyp["required"]  # optional
+
+
+def test_render_feature_comparison(tmp_path):
+    payload = {"summary": "s", "clear_hypothesis": True, "hypotheses": []}
+    meta = {"feature_comparison": {
+        "baseline_model": "random_forest", "n_refit": 6, "n_baseline_top": 10,
+        "shared": ["GE_ITGA1"], "refit_only": ["CRISPR_SMARCD1"],
+        "baseline_only": ["GE_FOO"], "divergence": "high"}}
+    out = report.write_report(payload, tmp_path / "i", compound_id="BRD:X", meta=meta)
+    md = out["markdown"].read_text()
+    assert "### Refit vs baseline top features" in md
+    assert "substantially different" in md
+    assert "Emphasized by the refit only: CRISPR_SMARCD1" in md

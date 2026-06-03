@@ -62,6 +62,25 @@ def render_markdown(payload: dict, compound_id: str, meta: dict | None = None) -
         lines.append("</tr></table>")
         lines.append("")
 
+    # --- Header: refit vs baseline top-feature comparison ---
+    cmp = meta.get("feature_comparison")
+    if cmp:
+        _DIV = {"high": "substantially different", "moderate": "partially overlapping",
+                "low": "largely consistent"}
+        bm = cmp.get("baseline_model", "baseline")
+        lines.append("### Refit vs baseline top features")
+        lines.append(
+            f"The resampled refit model selected {cmp['n_refit']} significant feature(s); "
+            f"{len(cmp['shared'])} overlap with the {bm} baseline's top {cmp['n_baseline_top']}. "
+            f"Top features are **{_DIV.get(cmp.get('divergence'), 'compared')}** between the two models.")
+        if cmp.get("shared"):
+            lines.append(f"- Selected by both: {', '.join(cmp['shared'])}")
+        if cmp.get("refit_only"):
+            lines.append(f"- Emphasized by the refit only: {', '.join(cmp['refit_only'])}")
+        if cmp.get("baseline_only"):
+            lines.append(f"- Top baseline features not selected by refit: {', '.join(cmp['baseline_only'])}")
+        lines.append("")
+
     # --- Summary + headline conclusions ---
     lines.append("## Summary")
     lines.append(payload.get("summary", ""))

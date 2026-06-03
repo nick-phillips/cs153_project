@@ -41,3 +41,13 @@ def test_load_compound(sample_compound):
     assert any("Selected-refit" in l for l in labels)
     assert any("random_forest" in l for l in labels)
     assert all(_P(s["source"]).exists() for s in res.shap_summaries)
+
+
+def test_refit_vs_baseline(sample_compound):
+    res = loader.load_compound(sample_compound)
+    cmp = loader.refit_vs_baseline(res)
+    assert cmp["baseline_model"] == "random_forest"
+    assert cmp["n_refit"] == len(res.passing_features)
+    # partition is consistent: shared + refit_only == all refit features
+    assert set(cmp["shared"]) | set(cmp["refit_only"]) == {f.name for f in res.passing_features}
+    assert cmp["divergence"] in {"high", "moderate", "low"}

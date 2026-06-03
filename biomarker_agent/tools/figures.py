@@ -37,6 +37,18 @@ def make_figure_tools(figures_dir, rel_prefix: str, data_ctx: DataContext,
                                feature, cid, ap)
         return {"figure": rel, "caption": f"{feature} vs {cid} response across cell lines"}
 
+    def _two_feature_response(feature_a: str, feature_b: str) -> dict:
+        for f in (feature_a, feature_b):
+            if f not in data_ctx.features.columns:
+                return {"error": f"feature {f!r} not in matrix"}
+        if cid not in data_ctx.responses.columns:
+            return {"error": f"compound {cid!r} not in responses"}
+        ap, rel = _abs(f"two_feature__{_slug(feature_a)}__{_slug(feature_b)}.png")
+        plots.two_feature_response(data_ctx.features[feature_a], data_ctx.features[feature_b],
+                                   data_ctx.responses[cid], feature_a, feature_b, cid, ap)
+        return {"figure": rel,
+                "caption": f"{feature_a} vs {feature_b}, colored by {cid} response"}
+
     def _feature_panel(features: list) -> dict:
         cols = [f for f in features if f in data_ctx.features.columns]
         if len(cols) < 2:
@@ -120,6 +132,10 @@ def make_figure_tools(figures_dir, rel_prefix: str, data_ctx: DataContext,
         "features": {"type": "array", "items": {"type": "string"},
                      "description": "Full feature names, e.g. ['GE_ITGA1','PROT_PDLIM5']"}},
         "required": ["features"]}
+    two_feat_schema = {"type": "object", "properties": {
+        "feature_a": {"type": "string", "description": "Full feature name for the x-axis"},
+        "feature_b": {"type": "string", "description": "Full feature name for the y-axis"}},
+        "required": ["feature_a", "feature_b"]}
     empty_schema = {"type": "object", "properties": {}}
 
     return [
@@ -127,6 +143,10 @@ def make_figure_tools(figures_dir, rel_prefix: str, data_ctx: DataContext,
              "Scatter of a feature vs this compound's response with regression line and r/p/n. "
              "Use to visualize and adjudicate the direction/strength of a feature's association.",
              feat_schema, _feature_response),
+        Tool("plot_two_feature_response",
+             "Scatter of feature A (x) vs feature B (y) with points colored by drug response. "
+             "Use to show how two candidate biomarkers jointly relate to response (interaction).",
+             two_feat_schema, _two_feature_response),
         Tool("plot_feature_panel",
              "Correlation heatmap among several features and the response together. Use to show "
              "how a combination of features relates to response and to each other (collinearity).",

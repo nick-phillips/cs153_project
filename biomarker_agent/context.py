@@ -2,7 +2,7 @@
 
 import json
 
-from .loader import CompoundResult
+from .loader import CompoundResult, refit_vs_baseline
 
 
 def build_seed_context(result: CompoundResult, drug_info: dict, internal: dict) -> str:
@@ -36,6 +36,16 @@ def build_seed_context(result: CompoundResult, drug_info: dict, internal: dict) 
         for model, feats in result.baseline_top_features.items():
             top = ", ".join(name for name, _ in feats[:8])
             lines.append(f"- {model}: {top}")
+
+    cmp = refit_vs_baseline(result)
+    lines.append("\n### Refit vs baseline top features")
+    lines.append(
+        f"Refit-selected vs {cmp['baseline_model']} baseline top-{cmp['n_baseline_top']} "
+        f"divergence: {cmp['divergence']}. "
+        f"Shared: {cmp['shared'] or 'none'}. "
+        f"Refit-only: {cmp['refit_only'] or 'none'}. "
+        f"Baseline-only (dropped by refit): {cmp['baseline_only'] or 'none'}. "
+        "Note in your report whether the refit emphasizes different features than the baseline.")
     return "\n".join(lines)
 
 

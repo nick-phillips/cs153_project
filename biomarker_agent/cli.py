@@ -10,7 +10,7 @@ from pathlib import Path
 from . import context, report
 from .agent import DEFAULT_MODEL, run_agent
 from .datactx import DataContext
-from .loader import find_compounds, load_compound
+from .loader import find_compounds, load_compound, refit_vs_baseline
 from .prompts import SYSTEM_PROMPT
 from .tools import build_registry
 
@@ -50,6 +50,7 @@ def run_one(compound_dir, out_dir, feature_file, response_file, treatment_info, 
         "n_samples": result.n_samples,
         "performance": result.metrics,
         "header_figures": header_figures,
+        "feature_comparison": refit_vs_baseline(result),
     }
     paths = report.write_report(payload, Path(out_dir), result.compound_id, meta=meta)
     trace_path = Path(out_dir) / "trace.json"
@@ -113,7 +114,9 @@ def main(argv=None):
     p.add_argument("--model", default=None,
                    help="Model id; defaults per provider")
     p.add_argument("--literature", choices=["pubmed", "paperclip"], default="pubmed")
-    p.add_argument("--max-tool-calls", type=int, default=40)
+    p.add_argument("--max-tool-calls", type=int, default=18,
+                   help="Tool-call budget per compound (kept low for parsimony; "
+                        "single-hypothesis runs rarely need more)")
     args = p.parse_args(argv)
 
     required_key = "ANTHROPIC_API_KEY" if args.provider == "anthropic" else "OPENROUTER_API_KEY"

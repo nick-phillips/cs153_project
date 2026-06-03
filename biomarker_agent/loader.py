@@ -78,6 +78,32 @@ def _collect_shap_summaries(path: Path) -> list:
     return out
 
 
+def refit_vs_baseline(result, baseline_model: str = "random_forest", top_n: int = 10) -> dict:
+    """Compare the refit model's selected features against a baseline's top features.
+
+    Returns the shared / refit-only / baseline-only feature sets plus a coarse
+    divergence label, so the report can highlight whether the resampled refit model
+    emphasizes different features than the baseline.
+    """
+    refit = [f.name for f in result.passing_features]
+    base_pairs = result.baseline_top_features.get(baseline_model, [])
+    baseline_top = [name for name, _ in base_pairs[:top_n]]
+    bset, rset = set(baseline_top), set(refit)
+    shared = [f for f in refit if f in bset]
+    denom = max(1, min(len(refit), len(baseline_top)))
+    frac = len(shared) / denom
+    divergence = "high" if frac < 0.34 else ("moderate" if frac < 0.67 else "low")
+    return {
+        "baseline_model": baseline_model,
+        "n_refit": len(refit),
+        "n_baseline_top": len(baseline_top),
+        "shared": shared,
+        "refit_only": [f for f in refit if f not in bset],
+        "baseline_only": [f for f in baseline_top if f not in rset],
+        "divergence": divergence,
+    }
+
+
 def load_compound(path: Path) -> CompoundResult:
     path = Path(path)
     summary = json.loads((path / "summary.json").read_text()) if (path / "summary.json").exists() \

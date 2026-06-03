@@ -41,6 +41,24 @@ def feature_response(x: pd.Series, y: pd.Series, feature_name: str,
     return finalize(fig, path)
 
 
+def two_feature_response(xa: pd.Series, xb: pd.Series, response: pd.Series,
+                         label_a: str, label_b: str, compound_id: str, path) -> str:
+    """Scatter of feature A vs feature B, with points colored by drug response."""
+    df = pd.concat([xa, xb, response], axis=1, join="inner").dropna()
+    df.columns = ["a", "b", "resp"]
+    if len(df) < 3:
+        raise ValueError(f"need >=3 shared points, got {len(df)}")
+    fig, ax = plt.subplots(figsize=(5.6, 4.4))
+    sc = ax.scatter(df["a"], df["b"], c=df["resp"], cmap="coolwarm", s=28,
+                    edgecolor="white", linewidth=0.3)
+    ax.set_xlabel(label_a)
+    ax.set_ylabel(label_b)
+    ax.set_title(f"{label_a} vs {label_b}, colored by response")
+    cbar = fig.colorbar(sc, ax=ax)
+    cbar.set_label(f"{compound_id} response")
+    return finalize(fig, path)
+
+
 def feature_panel(corr: pd.DataFrame, compound_id: str, path) -> str:
     """Heatmap of a correlation matrix among features (+ a response row/col)."""
     labels = list(corr.columns)
