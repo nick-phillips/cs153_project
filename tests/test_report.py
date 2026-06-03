@@ -109,6 +109,9 @@ def test_render_header_shap_section(tmp_path):
     out = report.write_report(payload, tmp_path / "i", compound_id="BRD:X", meta=meta)
     md = out["markdown"].read_text()
     assert "## Model feature attributions (SHAP)" in md
+    # rendered side by side in a single-row table
+    assert "<table><tr>" in md and "</tr></table>" in md
+    assert md.count("<td align=\"center\">") == 2
     assert ('<img src="figures/shap__selected_refit_model_significant_features.png" '
             'alt="Selected-refit model (significant features) — SHAP feature importance" '
             'width="360">') in md

@@ -69,7 +69,11 @@ def _copy_shap_summaries(result, out_dir: Path) -> list:
     figs_dir = Path(out_dir) / "figures"
     figs_dir.mkdir(parents=True, exist_ok=True)
     out = []
+    # Header shows only the selected-refit model vs the random_forest baseline.
+    wanted = ("Selected-refit", "Baseline model: random_forest")
     for item in getattr(result, "shap_summaries", []):
+        if not any(w in item["label"] for w in wanted):
+            continue
         src = Path(item["source"])
         if not src.exists():
             continue

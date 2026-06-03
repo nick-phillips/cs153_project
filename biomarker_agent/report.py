@@ -48,18 +48,19 @@ def render_markdown(payload: dict, compound_id: str, meta: dict | None = None) -
         lines.append(perf_line)
     lines.append("")
 
-    # --- Header: model SHAP feature-attribution summaries (pipeline artifacts) ---
-    header_figs = meta.get("header_figures") or []
+    # --- Header: model SHAP feature-attribution summaries (pipeline artifacts),
+    # rendered side by side in a single-row HTML table ---
+    header_figs = [f for f in (meta.get("header_figures") or []) if f.get("path")]
     if header_figs:
         lines.append("## Model feature attributions (SHAP)")
         lines.append("")
+        lines.append("<table><tr>")
         for fig in header_figs:
-            fpath, cap = fig.get("path"), fig.get("caption", "")
-            if fpath:
-                lines.append(f'<img src="{fpath}" alt="{cap}" width="{SHAP_WIDTH}">')
-                lines.append("")
-                lines.append(f"*{cap}*")
-                lines.append("")
+            cap = fig.get("caption", "")
+            lines.append(f'<td align="center"><img src="{fig["path"]}" alt="{cap}" '
+                         f'width="{SHAP_WIDTH}"><br><em>{cap}</em></td>')
+        lines.append("</tr></table>")
+        lines.append("")
 
     # --- Summary + headline conclusions ---
     lines.append("## Summary")
