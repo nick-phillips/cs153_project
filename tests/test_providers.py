@@ -95,6 +95,35 @@ def test_create_returns_anthropic_style_blocks(monkeypatch):
     assert tu.input == {"compound_id": "BRD:1"}
 
 
+def test_tool_choice_translated_to_openai(monkeypatch):
+    captured = {}
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        captured["body"] = json
+
+        class R:
+            status_code = 200
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"choices": [{"finish_reason": "tool_calls", "message": {
+                    "content": None,
+                    "tool_calls": [{"id": "c", "type": "function",
+                                    "function": {"name": "submit_report", "arguments": "{}"}}]}}]}
+
+        return R()
+
+    monkeypatch.setattr(providers.requests, "post", fake_post)
+    client = providers.OpenAICompatClient(api_key="k", base_url="https://x/v1")
+    client.messages.create(model="m", max_tokens=10, system="s", tools=[],
+                           messages=[{"role": "user", "content": "go"}],
+                           tool_choice={"type": "tool", "name": "submit_report"})
+    assert captured["body"]["tool_choice"] == {
+        "type": "function", "function": {"name": "submit_report"}}
+
+
 def test_create_handles_plain_text_stop(monkeypatch):
     def fake_post(url, json=None, headers=None, timeout=None):
         class R:

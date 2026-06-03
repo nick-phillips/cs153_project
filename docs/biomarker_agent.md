@@ -56,9 +56,30 @@ All external calls are cached under `--cache-dir` (default `.biomarker_agent_cac
 so re-runs are cheap and resilient to transient API failures. Each tool degrades
 gracefully — a failing API returns an `{"error": ...}` the agent works around.
 
+### Figure tools
+
+The agent also generates publication-quality figures (headless matplotlib, 300 DPI,
+consistent style), saved to `<out>/figures/` and embedded inline in `report.md` under
+the hypothesis they support:
+
+| Tool | Shows |
+|------|-------|
+| `plot_feature_response` | feature vs response scatter + regression + r/p/n |
+| `plot_feature_panel` | correlation heatmap among features + response |
+| `plot_dependency_distribution` | CRISPR gene-effect histogram + threshold |
+| `plot_codependency_bar` | top CRISPR co-dependencies |
+| `plot_passing_importance` | passing features' real vs null importance |
+| `plot_string_network` | STRING interactions among genes |
+| `plot_mutation_frequency` | cBioPortal mutations per gene |
+| `plot_pathway_membership` | Reactome pathway convergence |
+
+The agent attaches figures to each hypothesis; if it exhausts its `--max-tool-calls`
+budget it is forced to submit a complete report (with whatever figures it produced).
+
 ## Output
 
-Per compound: `report.md` (human) + `report.json` (machine) + `trace.json` (the full
+Per compound: `report.md` (human, with figures embedded) + `report.json` (machine) +
+a `figures/` directory + `trace.json` (the full
 agent trace — every tool call with its inputs/outputs plus the model's reasoning
 text, so you can observe and audit how it reached each hypothesis). Batch runs with
 `--out` also write `interpretation_index.md`.

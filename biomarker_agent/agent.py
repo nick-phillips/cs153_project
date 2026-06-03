@@ -74,8 +74,11 @@ def run_agent(client, registry, system_prompt: str, seed_context: str,
             content.append({"type": "text", "text": nudge})
     else:
         messages.append({"role": "user", "content": nudge})
+    # Force the model to emit the report tool on this final turn, so a budget
+    # exhaustion always yields a real report rather than an empty fallback.
     resp = client.messages.create(
         model=model, max_tokens=4096, system=system, tools=tools, messages=messages,
+        tool_choice={"type": "tool", "name": "submit_report"},
     )
     for b in _content_blocks(resp):
         if b["type"] == "tool_use" and b["name"] == "submit_report":

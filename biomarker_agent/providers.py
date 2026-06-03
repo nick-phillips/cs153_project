@@ -108,13 +108,18 @@ class _Messages:
     def __init__(self, parent):
         self._parent = parent
 
-    def create(self, model, max_tokens, system, tools, messages):
+    def create(self, model, max_tokens, system, tools, messages, tool_choice=None):
         body = {
             "model": model,
             "max_tokens": max_tokens,
             "messages": _to_openai_messages(system, messages),
             "tools": _to_openai_tools(tools),
         }
+        # Translate Anthropic-style tool_choice {"type":"tool","name":X} to the
+        # OpenAI form so a forced report works across both backends.
+        if isinstance(tool_choice, dict) and tool_choice.get("type") == "tool":
+            body["tool_choice"] = {"type": "function",
+                                   "function": {"name": tool_choice["name"]}}
         data = self._parent._post(body)
         choice = data["choices"][0]
         stop = _FINISH_MAP.get(choice.get("finish_reason"), "end_turn")
