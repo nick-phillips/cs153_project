@@ -151,3 +151,6 @@ work/
 
 # catboost training logs
 catboost_info/
+
+# biomarker_agent external-API cache
+.biomarker_agent_cache/

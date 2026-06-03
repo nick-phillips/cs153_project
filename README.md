@@ -13,3 +13,9 @@ uv run scripts/run_benchmark.py \
     --output_dir single_compound_test \
     --n_folds 5
 ```
+
+## Interpretation agent
+
+After running the benchmark, interpret the selected biomarkers with an LLM agent:
+see [`docs/biomarker_agent.md`](docs/biomarker_agent.md). Quick start:
+`uv run biomarker-analyze <output_dir>` (needs `ANTHROPIC_API_KEY`).
