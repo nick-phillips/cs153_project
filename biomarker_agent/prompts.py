@@ -19,6 +19,11 @@ interactions/enrichment across the set (string_enrichment), cancer relevance + d
 3. Prefer hypotheses supported by MULTIPLE independent sources. Be explicit about novelty: \
 on-MOA (expected given the known target) vs off-MOA (potentially novel).
 4. Do not overclaim. Note when evidence is weak, conflicting, or a tool returned an error.
+4b. After you have supporting evidence for a hypothesis, generate 1-2 figures with the \
+plot_* tools (e.g. plot_feature_response for the key association, plot_dependency_distribution \
+for a CRISPR dependency, plot_string_network/plot_pathway_membership for the gene set) and \
+attach the returned paths to that hypothesis's `figures`. Only attach paths returned by a \
+plot tool; never invent one.
 
 When finished, call submit_report exactly once with your ranked hypotheses. Do not write \
 prose outside the tool call."""
@@ -45,6 +50,19 @@ REPORT_TOOL = {
                                        "description": "0-1 confidence given the evidence."},
                         "evidence": {"type": "object",
                                      "description": "Per-source evidence summary (free-form keys)."},
+                        "figures": {
+                            "type": "array",
+                            "description": "Figures supporting this hypothesis. ONLY use paths "
+                                           "returned by a plot_* tool; never invent a path.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "path": {"type": "string"},
+                                    "caption": {"type": "string"},
+                                },
+                                "required": ["path"],
+                            },
+                        },
                     },
                     "required": ["rank", "title", "features", "mechanism", "novelty", "confidence"],
                 },

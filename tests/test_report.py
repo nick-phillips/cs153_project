@@ -37,3 +37,27 @@ def test_report_schema_is_valid_json_schema():
     from biomarker_agent import prompts
     assert prompts.REPORT_TOOL["name"] == "submit_report"
     assert "hypotheses" in prompts.REPORT_TOOL["input_schema"]["properties"]
+
+
+def test_render_embeds_figures(tmp_path):
+    from biomarker_agent import report
+    payload = {
+        "summary": "s",
+        "hypotheses": [{
+            "rank": 1, "title": "H", "features": ["CRISPR_SMARCD1"], "mechanism": "m",
+            "novelty": "off-MOA", "confidence": 0.6,
+            "evidence": {"internal": "r=0.3"},
+            "figures": [{"path": "figures/feature_response__CRISPR_SMARCD1.png",
+                         "caption": "SMARCD1 vs response"}],
+        }],
+    }
+    out = report.write_report(payload, tmp_path / "interp", compound_id="BRD:TEST-1")
+    md = out["markdown"].read_text()
+    assert "![SMARCD1 vs response](figures/feature_response__CRISPR_SMARCD1.png)" in md
+
+
+def test_report_schema_has_figures():
+    from biomarker_agent import prompts
+    hyp = prompts.REPORT_TOOL["input_schema"]["properties"]["hypotheses"]["items"]
+    assert "figures" in hyp["properties"]
+    assert "figures" not in hyp["required"]  # optional

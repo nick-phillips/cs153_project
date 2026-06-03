@@ -18,6 +18,13 @@ def render_markdown(payload: dict, compound_id: str) -> str:
             lines.append("**Evidence:**")
             for k, v in ev.items():
                 lines.append(f"- _{k}_: {v}")
+        for fig in (h.get("figures") or []):
+            fpath = fig.get("path")
+            if fpath:
+                cap = fig.get("caption", "")
+                lines.append("")
+                lines.append(f"![{cap}]({fpath})")
+                lines.append(f"*Figure: {cap}*")
         lines.append("")
     caveats = payload.get("caveats") or []
     if caveats:
