@@ -44,3 +44,9 @@ def test_run_one_writes_report(sample_compound, tmp_path):
     )
     assert out["markdown"].exists()
     assert "BRD:BRD-K25244359-066-03-4" in out["markdown"].read_text()
+    # trace is persisted alongside the report
+    import json
+    assert out["trace"].exists()
+    trace = json.loads(out["trace"].read_text())
+    assert trace["compound_id"] == "BRD:BRD-K25244359-066-03-4"
+    assert "transcript" in trace

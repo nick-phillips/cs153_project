@@ -6,20 +6,38 @@ evidence-backed biological-mechanism hypotheses per compound.
 ## Usage
 
 ```bash
-export ANTHROPIC_API_KEY=sk-...           # required
+# Default backend: Anthropic API directly
+export ANTHROPIC_API_KEY=sk-...
+
+# Or route through OpenRouter (OpenAI-compatible gateway to Claude + others)
+export OPENROUTER_API_KEY=sk-or-...
+
 # optional: export PAPERCLIP_API_KEY=...  # enables --literature paperclip
 
 # whole batch (dir containing MANIFEST.csv)
 uv run biomarker-analyze data/small_test_sample --out results/interpretation
 
-# one compound (writes to <dir>/interpretation by default)
-uv run biomarker-analyze data/small_test_sample/BRD_BRD-K25244359-066-03-4
+# one compound via OpenRouter (writes to <dir>/interpretation by default)
+uv run biomarker-analyze data/small_test_sample/BRD_BRD-K25244359-066-03-4 \
+    --provider openrouter
 ```
 
 Run from the repo root so the default `data/` paths resolve.
 
-Flags: `--model`, `--literature {pubmed,paperclip}`, `--max-tool-calls`,
-`--feature-file`, `--response-file`, `--treatment-info`, `--cache-dir`.
+### LLM backend
+
+`--provider {anthropic,openrouter}` (default `anthropic`).
+
+- `anthropic` — talks to the Anthropic API directly (needs `ANTHROPIC_API_KEY`);
+  default model `claude-sonnet-4-6`.
+- `openrouter` — OpenAI-compatible gateway (needs `OPENROUTER_API_KEY`); default
+  model `anthropic/claude-sonnet-4.6`. `--base-url` overrides the endpoint, so the
+  same adapter also works against other OpenAI-compatible inference services
+  (e.g. DigitalOcean serverless).
+
+Flags: `--provider`, `--base-url`, `--model`, `--literature {pubmed,paperclip}`,
+`--max-tool-calls`, `--feature-file`, `--response-file`, `--treatment-info`,
+`--cache-dir`.
 
 ## Tools the agent can call
 
@@ -40,8 +58,10 @@ gracefully — a failing API returns an `{"error": ...}` the agent works around.
 
 ## Output
 
-Per compound: `report.md` (human) + `report.json` (machine). Batch runs with `--out`
-also write `interpretation_index.md`.
+Per compound: `report.md` (human) + `report.json` (machine) + `trace.json` (the full
+agent trace — every tool call with its inputs/outputs plus the model's reasoning
+text, so you can observe and audit how it reached each hypothesis). Batch runs with
+`--out` also write `interpretation_index.md`.
 
 ## Architecture
 

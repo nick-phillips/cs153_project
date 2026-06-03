@@ -1,6 +1,7 @@
 """Command-line entry point: point at an output dir, get interpretation reports."""
 
 import argparse
+import json
 import os
 from pathlib import Path
 
@@ -13,10 +14,17 @@ from .tools import build_registry
 
 DATA = Path("data")
 
+OPENROUTER_BASE = "https://openrouter.ai/api/v1"
+# Per-provider default model id (Anthropic-native vs OpenRouter slug).
+DEFAULT_MODELS = {
+    "anthropic": DEFAULT_MODEL,
+    "openrouter": "anthropic/claude-sonnet-4.6",
+}
+
 
 def run_one(compound_dir, out_dir, feature_file, response_file, treatment_info, cache_dir,
             client, model=DEFAULT_MODEL, literature_backend="pubmed", max_tool_calls=40):
-    """Analyze a single compound dir and write its report. Returns report paths."""
+    """Analyze a single compound dir and write its report + trace. Returns paths."""
     result = load_compound(compound_dir)
     data_ctx = DataContext(feature_file, response_file)
     registry = build_registry(
@@ -26,16 +34,30 @@ def run_one(compound_dir, out_dir, feature_file, response_file, treatment_info, 
     drug_info = registry.dispatch("drug_context", {"compound_id": result.compound_id})
     internal = context.precompute_internal(result, data_ctx)
     seed = context.build_seed_context(result, drug_info=drug_info, internal=internal)
-    payload, _ = run_agent(
+    payload, transcript = run_agent(
         client=client, registry=registry, system_prompt=SYSTEM_PROMPT,
         seed_context=seed, model=model, max_tool_calls=max_tool_calls,
     )
-    return report.write_report(payload, Path(out_dir), result.compound_id)
+    paths = report.write_report(payload, Path(out_dir), result.compound_id)
+    trace_path = Path(out_dir) / "trace.json"
+    trace_path.write_text(json.dumps(
+        {"compound_id": result.compound_id, "model": model, "seed_context": seed,
+         "transcript": transcript}, indent=2))
+    paths["trace"] = trace_path
+    return paths
 
 
-def _make_client():
-    import anthropic
-    return anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
+def _make_client(provider: str, base_url: str | None = None):
+    if provider == "anthropic":
+        import anthropic
+        return anthropic.Anthropic()  # reads ANTHROPIC_API_KEY
+    # OpenAI-compatible providers (OpenRouter, DigitalOcean serverless, ...)
+    from .providers import OpenAICompatClient
+    return OpenAICompatClient(
+        api_key=os.environ["OPENROUTER_API_KEY"],
+        base_url=base_url or OPENROUTER_BASE,
+        extra_headers={"X-Title": "biomarker_agent"},
+    )
 
 
 def main(argv=None):
@@ -46,15 +68,22 @@ def main(argv=None):
     p.add_argument("--response-file", default=str(DATA / "responses_primary_v4.pkl"))
     p.add_argument("--treatment-info", default=str(DATA / "primary_screen_treatment_info.csv"))
     p.add_argument("--cache-dir", default=".biomarker_agent_cache")
-    p.add_argument("--model", default=DEFAULT_MODEL)
+    p.add_argument("--provider", choices=["anthropic", "openrouter"], default="anthropic",
+                   help="LLM backend (default: anthropic)")
+    p.add_argument("--base-url", default=None,
+                   help="Override the OpenAI-compatible base URL (e.g. a DigitalOcean endpoint)")
+    p.add_argument("--model", default=None,
+                   help="Model id; defaults per provider")
     p.add_argument("--literature", choices=["pubmed", "paperclip"], default="pubmed")
     p.add_argument("--max-tool-calls", type=int, default=40)
     args = p.parse_args(argv)
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise SystemExit("ERROR: ANTHROPIC_API_KEY is not set.")
+    required_key = "ANTHROPIC_API_KEY" if args.provider == "anthropic" else "OPENROUTER_API_KEY"
+    if not os.environ.get(required_key):
+        raise SystemExit(f"ERROR: {required_key} is not set (required for --provider {args.provider}).")
 
-    client = _make_client()
+    model = args.model or DEFAULT_MODELS[args.provider]
+    client = _make_client(args.provider, args.base_url)
     compounds = find_compounds(Path(args.target))
     index_lines = ["# Interpretation index", ""]
     for cdir in compounds:
@@ -63,7 +92,7 @@ def main(argv=None):
             compound_dir=cdir, out_dir=out_dir,
             feature_file=Path(args.feature_file), response_file=Path(args.response_file),
             treatment_info=Path(args.treatment_info), cache_dir=Path(args.cache_dir),
-            client=client, model=args.model, literature_backend=args.literature,
+            client=client, model=model, literature_backend=args.literature,
             max_tool_calls=args.max_tool_calls,
         )
         print(f"[done] {cdir.name} -> {paths['markdown']}")

@@ -38,6 +38,9 @@ def run_agent(client, registry, system_prompt: str, seed_context: str,
         )
         blocks = _content_blocks(resp)
         messages.append({"role": "assistant", "content": blocks})
+        for b in blocks:
+            if b["type"] == "text" and b["text"].strip():
+                transcript.append({"event": "assistant_text", "text": b["text"]})
         tool_uses = [b for b in blocks if b["type"] == "tool_use"]
         if not tool_uses:
             # model stopped without a tool call; nudge once then stop
