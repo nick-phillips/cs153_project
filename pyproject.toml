@@ -12,13 +12,18 @@ dependencies = [
     "xgboost>=2.0",
     "catboost>=1.2",
     "shap>=0.43",
+    "anthropic>=0.40",
+    "requests>=2.31",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest", "ipykernel"]
 
+[project.scripts]
+biomarker-analyze = "biomarker_agent.cli:main"
+
 [tool.setuptools]
-packages = ["biomarker_discovery"]
+packages = ["biomarker_discovery", "biomarker_agent", "biomarker_agent.tools"]
 
 [tool.uv]
 # xgboost only needs nvidia-nccl-cu12 on Linux (CUDA wheels). Scope the
