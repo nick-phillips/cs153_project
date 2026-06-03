@@ -9,12 +9,14 @@ const entries: IndexEntry[] = [
     divergence: 'moderate', top_hypothesis_title: 'MDM4 axis',
     refit_features: ['shRNA_MDM4', 'GE_KRT20'], baseline_features: ['CRISPR_TP53'],
     hypothesis_genes: ['MDM4', 'KRT20'], search_genes: ['MDM4', 'KRT20', 'TP53'],
+    top_features: [],
   },
   {
     id: 'C2', compound_id: 'BRD:2', drug_name: 'Posaconazole', moa: 'STEROL', targets: '',
     has_hypothesis: false, performance: { refit: 0.1, bootstrap: 0, baseline: 0 },
     divergence: 'low', top_hypothesis_title: null,
     refit_features: ['GE_FOO'], baseline_features: [], hypothesis_genes: [], search_genes: ['FOO'],
+    top_features: [],
   },
 ];
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { loadCompound } from '../lib/data';
 import type { CompoundData } from '../lib/types';
 import ReportView from '../components/ReportView';
@@ -22,26 +22,16 @@ export default function CompoundPage() {
   }, [id]);
 
   if (error) {
-    return (
-      <div className="page">
-        <Link to="/" className="back">← All compounds</Link>
-        <p className="error">{error}</p>
-      </div>
-    );
+    return <div className="page"><p className="error">{error}</p></div>;
   }
   if (!data) {
-    return (
-      <div className="page">
-        <Link to="/" className="back">← All compounds</Link>
-        <p>Loading…</p>
-      </div>
-    );
+    return <div className="page"><p>Loading…</p></div>;
   }
 
   const { meta } = data;
+  const divergence = meta.feature_comparison?.divergence;
   return (
     <div className="page compound-page">
-      <Link to="/" className="back">← All compounds</Link>
       <header className="compound-header">
         <h1>{meta.drug_name || data.compound_id}</h1>
         <div className="card-id">{data.compound_id}</div>
@@ -50,13 +40,18 @@ export default function CompoundPage() {
           {meta.targets ? ` · target: ${meta.targets}` : ''}
           {typeof meta.n_samples === 'number' ? ` · n=${meta.n_samples} cell lines` : ''}
         </div>
-        <PerfBadges
-          perf={{
-            refit: meta.performance?.selected_refit_oob_pearson ?? null,
-            bootstrap: meta.performance?.bootstrap_pred_pearson ?? null,
-            baseline: meta.performance?.baseline_pred_pearson ?? null,
-          }}
-        />
+        <div className="stat-row">
+          <PerfBadges
+            perf={{
+              refit: meta.performance?.selected_refit_oob_pearson ?? null,
+              bootstrap: meta.performance?.bootstrap_pred_pearson ?? null,
+              baseline: meta.performance?.baseline_pred_pearson ?? null,
+            }}
+          />
+          {divergence && (
+            <span className={`badge div-${divergence}`}>{divergence} divergence</span>
+          )}
+        </div>
       </header>
 
       <nav className="tabs">

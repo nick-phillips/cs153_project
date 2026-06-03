@@ -4,6 +4,13 @@ export interface Performance {
   baseline: number | null;
 }
 
+export interface TopFeature {
+  name: string; // full token, e.g. "GE_KRT20"
+  gene: string; // bare symbol, e.g. "KRT20"
+  klass: string; // perturbation type, e.g. "GE" | "shRNA" | "CRISPR"
+  importance: number; // mean real SHAP importance (refit model)
+}
+
 export interface IndexEntry {
   id: string;
   compound_id: string;
@@ -18,6 +25,7 @@ export interface IndexEntry {
   baseline_features: string[];
   hypothesis_genes: string[];
   search_genes: string[];
+  top_features: TopFeature[];
 }
 
 export interface FeatureComparison {
@@ -86,4 +94,5 @@ export interface CompoundData {
   proposed_biomarkers: string[];
   caveats: string[];
   trace: Trace | null;
+  top_features?: TopFeature[];
 }
