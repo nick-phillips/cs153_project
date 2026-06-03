@@ -59,3 +59,38 @@ def test_run_agent_returns_report():
     assert payload["summary"] == "done"
     assert payload["hypotheses"][0]["features"] == ["GE_AAA"]
     assert client.calls == 2
+
+
+class BudgetExhaustingClient:
+    """Always dispatches a (non-report) tool, never submits a report, and
+    records the messages it is handed so we can assert role alternation."""
+
+    def __init__(self):
+        self.calls = 0
+        self.messages = self
+        self.seen_messages = []
+
+    def create(self, **kwargs):
+        self.calls += 1
+        self.seen_messages = kwargs["messages"]
+        return _Msg(
+            [_Block(type="tool_use", id=f"t{self.calls}", name="drug_context",
+                    input={"compound_id": "BRD:TEST-1"})],
+            "tool_use",
+        )
+
+
+def test_budget_exhaustion_keeps_roles_alternating():
+    # With max_tool_calls=1 the loop exits via the budget path (not the
+    # no_tool_use break), which historically produced two consecutive user
+    # messages and a 400 from the real API. Guard against that regression.
+    client = BudgetExhaustingClient()
+    payload, _ = run_agent(
+        client=client, registry=FakeRegistry(), system_prompt="sys",
+        seed_context="ctx", model="fake", max_tool_calls=1,
+    )
+    # safe fallback payload returned (model never submitted a report)
+    assert payload["hypotheses"] == []
+    # no two consecutive messages share the same role
+    roles = [m["role"] for m in client.seen_messages]
+    assert all(a != b for a, b in zip(roles, roles[1:])), roles

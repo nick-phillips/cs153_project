@@ -58,9 +58,19 @@ def run_agent(client, registry, system_prompt: str, seed_context: str,
             })
         messages.append({"role": "user", "content": results})
 
-    # budget exhausted without report: ask once for the report explicitly
-    messages.append({"role": "user",
-                     "content": "Tool budget reached. Call submit_report now with your best hypotheses."})
+    # Budget exhausted (or model stopped) without a report: ask once for it.
+    # The API requires alternating roles, so if the last turn is already a user
+    # message (the final tool_result batch), fold the nudge into it as a text
+    # block rather than appending a second consecutive user message.
+    nudge = "Tool budget reached. Call submit_report now with your best hypotheses."
+    if messages and messages[-1]["role"] == "user":
+        content = messages[-1]["content"]
+        if isinstance(content, str):
+            messages[-1]["content"] = content + "\n\n" + nudge
+        else:
+            content.append({"type": "text", "text": nudge})
+    else:
+        messages.append({"role": "user", "content": nudge})
     resp = client.messages.create(
         model=model, max_tokens=4096, system=system, tools=tools, messages=messages,
     )
