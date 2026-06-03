@@ -41,6 +41,7 @@ class CompoundResult:
     passing_features: list[PassingFeature]
     passing_by_class: dict
     baseline_top_features: dict = field(default_factory=dict)
+    shap_summaries: list = field(default_factory=list)
 
 
 def find_compounds(root: Path) -> list[Path]:
@@ -61,6 +62,19 @@ def _load_baseline_top(path: Path, top_n: int = 15) -> dict:
             continue
         df = pd.read_csv(fi).sort_values("mean_abs_shap", ascending=False).head(top_n)
         out[model] = list(zip(df["feature"].astype(str), df["mean_abs_shap"].astype(float)))
+    return out
+
+
+def _collect_shap_summaries(path: Path) -> list:
+    """Existing pipeline SHAP-summary PNGs: selected-refit model + baselines."""
+    out = []
+    selected = path / "refract" / "significant" / "selected_shap_summary.png"
+    if selected.exists():
+        out.append({"label": "Selected-refit model (significant features)", "source": str(selected)})
+    for model in BASELINE_MODELS:
+        p = path / "baselines" / model / "shap_summary.png"
+        if p.exists():
+            out.append({"label": f"Baseline model: {model}", "source": str(p)})
     return out
 
 
@@ -106,4 +120,5 @@ def load_compound(path: Path) -> CompoundResult:
         passing_features=passing,
         passing_by_class=summary.get("passing_by_class", {}),
         baseline_top_features=_load_baseline_top(path),
+        shap_summaries=_collect_shap_summaries(path),
     )

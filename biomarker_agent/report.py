@@ -3,9 +3,10 @@
 import json
 from pathlib import Path
 
-# Display width (px) for embedded figures. Source PNGs are 300-DPI; constraining
-# the rendered width keeps the report readable instead of showing huge images.
-IMG_WIDTH = 540
+# Display widths (px) for embedded figures. Source PNGs are 300-DPI; constraining
+# the rendered width keeps the report compact instead of showing huge images.
+IMG_WIDTH = 420       # agent-generated evidence figures
+SHAP_WIDTH = 360      # header SHAP-summary panels (several shown together)
 
 
 def _performance_line(meta: dict) -> str | None:
@@ -46,6 +47,19 @@ def render_markdown(payload: dict, compound_id: str, meta: dict | None = None) -
     if perf_line:
         lines.append(perf_line)
     lines.append("")
+
+    # --- Header: model SHAP feature-attribution summaries (pipeline artifacts) ---
+    header_figs = meta.get("header_figures") or []
+    if header_figs:
+        lines.append("## Model feature attributions (SHAP)")
+        lines.append("")
+        for fig in header_figs:
+            fpath, cap = fig.get("path"), fig.get("caption", "")
+            if fpath:
+                lines.append(f'<img src="{fpath}" alt="{cap}" width="{SHAP_WIDTH}">')
+                lines.append("")
+                lines.append(f"*{cap}*")
+                lines.append("")
 
     # --- Summary + headline conclusions ---
     lines.append("## Summary")

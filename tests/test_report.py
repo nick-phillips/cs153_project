@@ -94,8 +94,25 @@ def test_render_embeds_figures_sized(tmp_path):
     md = out["markdown"].read_text()
     # width-constrained <img> embed (not a raw full-size markdown image)
     assert ('<img src="figures/feature_response__CRISPR_SMARCD1.png" '
-            'alt="SMARCD1 vs response" width="540">') in md
+            'alt="SMARCD1 vs response" width="420">') in md
     assert "*SMARCD1 vs response*" in md
+
+
+def test_render_header_shap_section(tmp_path):
+    payload = {"summary": "s", "clear_hypothesis": True, "hypotheses": []}
+    meta = {"header_figures": [
+        {"path": "figures/shap__selected_refit_model_significant_features.png",
+         "caption": "Selected-refit model (significant features) — SHAP feature importance"},
+        {"path": "figures/shap__baseline_model_random_forest.png",
+         "caption": "Baseline model: random_forest — SHAP feature importance"},
+    ]}
+    out = report.write_report(payload, tmp_path / "i", compound_id="BRD:X", meta=meta)
+    md = out["markdown"].read_text()
+    assert "## Model feature attributions (SHAP)" in md
+    assert ('<img src="figures/shap__selected_refit_model_significant_features.png" '
+            'alt="Selected-refit model (significant features) — SHAP feature importance" '
+            'width="360">') in md
+    assert "Baseline model: random_forest" in md
 
 
 def test_report_schema_has_figures():

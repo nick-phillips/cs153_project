@@ -35,3 +35,9 @@ def test_load_compound(sample_compound):
     # baseline top features present for at least random_forest
     assert "random_forest" in res.baseline_top_features
     assert len(res.baseline_top_features["random_forest"]) > 0
+    # SHAP summary images collected: selected-refit + baselines, all existing files
+    from pathlib import Path as _P
+    labels = [s["label"] for s in res.shap_summaries]
+    assert any("Selected-refit" in l for l in labels)
+    assert any("random_forest" in l for l in labels)
+    assert all(_P(s["source"]).exists() for s in res.shap_summaries)

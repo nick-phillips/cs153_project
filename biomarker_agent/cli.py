@@ -3,6 +3,8 @@
 import argparse
 import json
 import os
+import re
+import shutil
 from pathlib import Path
 
 from . import context, report
@@ -40,12 +42,14 @@ def run_one(compound_dir, out_dir, feature_file, response_file, treatment_info, 
         client=client, registry=registry, system_prompt=SYSTEM_PROMPT,
         seed_context=seed, model=model, max_tool_calls=max_tool_calls,
     )
+    header_figures = _copy_shap_summaries(result, Path(out_dir))
     meta = {
         "drug_name": drug_info.get("drug_name"),
         "moa": drug_info.get("moa"),
         "targets": drug_info.get("targets"),
         "n_samples": result.n_samples,
         "performance": result.metrics,
+        "header_figures": header_figures,
     }
     paths = report.write_report(payload, Path(out_dir), result.compound_id, meta=meta)
     trace_path = Path(out_dir) / "trace.json"
@@ -54,6 +58,27 @@ def run_one(compound_dir, out_dir, feature_file, response_file, treatment_info, 
          "transcript": transcript}, indent=2))
     paths["trace"] = trace_path
     return paths
+
+
+def _copy_shap_summaries(result, out_dir: Path) -> list:
+    """Copy the pipeline's SHAP-summary PNGs into the report's figures dir.
+
+    Returns header figures [{path, caption}] with paths relative to out_dir so
+    they embed in report.md.
+    """
+    figs_dir = Path(out_dir) / "figures"
+    figs_dir.mkdir(parents=True, exist_ok=True)
+    out = []
+    for item in getattr(result, "shap_summaries", []):
+        src = Path(item["source"])
+        if not src.exists():
+            continue
+        slug = re.sub(r"[^A-Za-z0-9]+", "_", item["label"]).strip("_").lower()
+        dest = figs_dir / f"shap__{slug}.png"
+        shutil.copyfile(src, dest)
+        out.append({"path": f"figures/{dest.name}",
+                    "caption": f"{item['label']} — SHAP feature importance"})
+    return out
 
 
 def _make_client(provider: str, base_url: str | None = None):
