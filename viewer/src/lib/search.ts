@@ -6,6 +6,11 @@ export interface SearchResult {
   matchedFields: string[];
 }
 
+// `search_genes` is the union of bare gene symbols (e.g. "MDM4"); the
+// *_features keys hold the full tokens (e.g. "shRNA_MDM4"). Both are indexed so
+// a query matches whether the user types the gene or the full feature name, and
+// the matched-field metadata can tell them which model surfaced it (refit vs
+// baseline vs hypothesis). The overlap is intentional, not redundant.
 const KEYS = [
   { name: 'drug_name', weight: 3 },
   { name: 'compound_id', weight: 3 },
