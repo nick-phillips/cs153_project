@@ -42,10 +42,15 @@ def run_one(compound_dir, out_dir, feature_file, response_file, treatment_info, 
     drug_info = registry.dispatch("drug_context", {"compound_id": result.compound_id})
     internal = context.precompute_internal(result, data_ctx)
     seed = context.build_seed_context(result, drug_info=drug_info, internal=internal)
+    usage_before = client.usage_totals() if hasattr(client, "usage_totals") else None
     payload, transcript = run_agent(
         client=client, registry=registry, system_prompt=SYSTEM_PROMPT,
         seed_context=seed, model=model, max_tool_calls=max_tool_calls,
     )
+    usage = None
+    if usage_before is not None:
+        after = client.usage_totals()
+        usage = {k: round(after[k] - usage_before[k], 6) for k in after}
     header_figures = _copy_shap_summaries(result, Path(out_dir))
     meta = {
         "drug_name": drug_info.get("drug_name"),
@@ -59,8 +64,8 @@ def run_one(compound_dir, out_dir, feature_file, response_file, treatment_info, 
     paths = report.write_report(payload, Path(out_dir), result.compound_id, meta=meta)
     trace_path = Path(out_dir) / "trace.json"
     trace_path.write_text(json.dumps(
-        {"compound_id": result.compound_id, "model": model, "seed_context": seed,
-         "transcript": transcript}, indent=2))
+        {"compound_id": result.compound_id, "model": model, "usage": usage,
+         "seed_context": seed, "transcript": transcript}, indent=2))
     paths["trace"] = trace_path
     return paths
 

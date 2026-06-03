@@ -136,6 +136,25 @@ class OpenAICompatClient:
         self.extra_headers = extra_headers or {}
         self.timeout = timeout
         self.messages = _Messages(self)
+        # Cumulative usage across all calls on this client (OpenRouter reports
+        # per-call cost in usage.cost).
+        self.total_cost = 0.0
+        self.total_prompt_tokens = 0
+        self.total_completion_tokens = 0
+        self.n_calls = 0
+
+    def usage_totals(self) -> dict:
+        return {"cost_usd": round(self.total_cost, 6),
+                "prompt_tokens": self.total_prompt_tokens,
+                "completion_tokens": self.total_completion_tokens,
+                "n_calls": self.n_calls}
+
+    def _record_usage(self, data: dict) -> None:
+        u = data.get("usage") or {}
+        self.total_cost += float(u.get("cost") or 0.0)
+        self.total_prompt_tokens += int(u.get("prompt_tokens") or 0)
+        self.total_completion_tokens += int(u.get("completion_tokens") or 0)
+        self.n_calls += 1
 
     def _post(self, body: dict) -> dict:
         headers = {"Authorization": f"Bearer {self.api_key}",
@@ -143,4 +162,6 @@ class OpenAICompatClient:
         resp = requests.post(f"{self.base_url}/chat/completions", json=body,
                              headers=headers, timeout=self.timeout)
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json()
+        self._record_usage(data)
+        return data

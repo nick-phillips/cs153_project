@@ -124,6 +124,33 @@ def test_tool_choice_translated_to_openai(monkeypatch):
         "type": "function", "function": {"name": "submit_report"}}
 
 
+def test_usage_accumulates(monkeypatch):
+    def fake_post(url, json=None, headers=None, timeout=None):
+        class R:
+            status_code = 200
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return {"usage": {"cost": 0.0021, "prompt_tokens": 500, "completion_tokens": 60},
+                        "choices": [{"finish_reason": "stop",
+                                     "message": {"content": "ok", "tool_calls": None}}]}
+
+        return R()
+
+    monkeypatch.setattr(providers.requests, "post", fake_post)
+    client = providers.OpenAICompatClient(api_key="k", base_url="https://x/v1")
+    for _ in range(3):
+        client.messages.create(model="m", max_tokens=10, system="s", tools=[],
+                               messages=[{"role": "user", "content": "hi"}])
+    totals = client.usage_totals()
+    assert totals["n_calls"] == 3
+    assert abs(totals["cost_usd"] - 0.0063) < 1e-9
+    assert totals["prompt_tokens"] == 1500
+    assert totals["completion_tokens"] == 180
+
+
 def test_create_handles_plain_text_stop(monkeypatch):
     def fake_post(url, json=None, headers=None, timeout=None):
         class R:
