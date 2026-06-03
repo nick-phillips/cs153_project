@@ -4,8 +4,12 @@ import argparse
 import json
 import os
 import re
-import shutil
 from pathlib import Path
+
+from PIL import Image
+
+# Downscaled width (px) for header SHAP panels so two render side by side.
+SHAP_PANEL_WIDTH = 430
 
 from . import context, report
 from .agent import DEFAULT_MODEL, run_agent
@@ -80,7 +84,11 @@ def _copy_shap_summaries(result, out_dir: Path) -> list:
             continue
         slug = re.sub(r"[^A-Za-z0-9]+", "_", item["label"]).strip("_").lower()
         dest = figs_dir / f"shap__{slug}.png"
-        shutil.copyfile(src, dest)
+        im = Image.open(src)
+        if im.width > SHAP_PANEL_WIDTH:
+            h = round(im.height * SHAP_PANEL_WIDTH / im.width)
+            im = im.resize((SHAP_PANEL_WIDTH, h), Image.LANCZOS)
+        im.save(dest)
         out.append({"path": f"figures/{dest.name}",
                     "caption": f"{item['label']} — SHAP feature importance"})
     return out

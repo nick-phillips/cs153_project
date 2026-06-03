@@ -92,9 +92,10 @@ def test_render_embeds_figures_sized(tmp_path):
     }
     out = report.write_report(payload, tmp_path / "interp", compound_id="BRD:TEST-1", meta={})
     md = out["markdown"].read_text()
-    # width-constrained <img> embed (not a raw full-size markdown image)
-    assert ('<img src="figures/feature_response__CRISPR_SMARCD1.png" '
-            'alt="SMARCD1 vs response" width="420">') in md
+    # markdown image syntax (renders reliably in VS Code preview), empty alt,
+    # visible italic caption below
+    assert "![](figures/feature_response__CRISPR_SMARCD1.png)" in md
+    assert "<img" not in md  # no raw HTML img tags
     assert "*SMARCD1 vs response*" in md
 
 
@@ -109,13 +110,12 @@ def test_render_header_shap_section(tmp_path):
     out = report.write_report(payload, tmp_path / "i", compound_id="BRD:X", meta=meta)
     md = out["markdown"].read_text()
     assert "## Model feature attributions (SHAP)" in md
-    # rendered side by side in a single-row table
-    assert "<table><tr>" in md and "</tr></table>" in md
-    assert md.count("<td align=\"center\">") == 2
-    assert ('<img src="figures/shap__selected_refit_model_significant_features.png" '
-            'alt="Selected-refit model (significant features) — SHAP feature importance" '
-            'width="360">') in md
+    # rendered side by side as a markdown table: labels header row + image row
+    assert "| --- | --- |" in md
+    assert "![](figures/shap__selected_refit_model_significant_features.png)" in md
+    assert "![](figures/shap__baseline_model_random_forest.png)" in md
     assert "Baseline model: random_forest" in md
+    assert "<img" not in md  # no raw HTML
 
 
 def test_report_schema_has_figures():

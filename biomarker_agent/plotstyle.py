@@ -27,7 +27,9 @@ def apply_style() -> None:
     """Apply a clean, consistent look used by every figure."""
     plt.rcParams.update({
         "figure.dpi": 120,
-        "savefig.dpi": 300,
+        # Embeds use markdown image syntax (no width control), so size is the
+        # pixel size: a modest DPI keeps figures compact yet crisp on screen.
+        "savefig.dpi": 110,
         "savefig.bbox": "tight",
         "figure.constrained_layout.use": True,
         "font.family": "sans-serif",

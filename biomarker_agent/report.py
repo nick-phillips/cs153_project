@@ -3,10 +3,10 @@
 import json
 from pathlib import Path
 
-# Display widths (px) for embedded figures. Source PNGs are 300-DPI; constraining
-# the rendered width keeps the report compact instead of showing huge images.
-IMG_WIDTH = 420       # agent-generated evidence figures
-SHAP_WIDTH = 360      # header SHAP-summary panels (several shown together)
+# Figures are embedded with markdown image syntax (![](path)) rather than raw
+# <img> HTML, because some markdown previewers (e.g. VS Code) only resolve
+# relative image paths for the markdown syntax. Display size is controlled at the
+# source (export DPI for agent figures; Pillow downscaling for SHAP panels).
 
 
 def _performance_line(meta: dict) -> str | None:
@@ -54,12 +54,11 @@ def render_markdown(payload: dict, compound_id: str, meta: dict | None = None) -
     if header_figs:
         lines.append("## Model feature attributions (SHAP)")
         lines.append("")
-        lines.append("<table><tr>")
-        for fig in header_figs:
-            cap = fig.get("caption", "")
-            lines.append(f'<td align="center"><img src="{fig["path"]}" alt="{cap}" '
-                         f'width="{SHAP_WIDTH}"><br><em>{cap}</em></td>')
-        lines.append("</tr></table>")
+        # Markdown table: labels in the header row, images side by side below.
+        labels = [f.get("caption", "") for f in header_figs]
+        lines.append("| " + " | ".join(labels) + " |")
+        lines.append("| " + " | ".join(["---"] * len(header_figs)) + " |")
+        lines.append("| " + " | ".join(f"![]({f['path']})" for f in header_figs) + " |")
         lines.append("")
 
     # --- Header: refit vs baseline top-feature comparison ---
@@ -125,8 +124,10 @@ def render_markdown(payload: dict, compound_id: str, meta: dict | None = None) -
                 fpath = fig.get("path")
                 if fpath:
                     cap = fig.get("caption", "")
+                    # empty alt avoids breaking ![..](..) on special chars in cap;
+                    # the visible caption is the italic line below.
                     lines.append("")
-                    lines.append(f'<img src="{fpath}" alt="{cap}" width="{IMG_WIDTH}">')
+                    lines.append(f"![]({fpath})")
                     lines.append("")
                     lines.append(f"*{cap}*")
             lines.append("")

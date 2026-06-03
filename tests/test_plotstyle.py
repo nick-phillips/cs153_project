@@ -19,7 +19,7 @@ def test_apply_style_sets_publication_rcparams():
     assert mpl.get_backend().lower() == "agg"
     assert mpl.rcParams["axes.spines.top"] is False
     assert mpl.rcParams["axes.spines.right"] is False
-    assert mpl.rcParams["savefig.dpi"] == 300
+    assert mpl.rcParams["savefig.dpi"] == 110
 
 
 def test_finalize_writes_png_and_closes(tmp_path):
