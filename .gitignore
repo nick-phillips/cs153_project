@@ -154,3 +154,8 @@ catboost_info/
 
 # biomarker_agent external-API cache
 .biomarker_agent_cache/
+
+# results viewer
+viewer/node_modules/
+viewer/dist/
+viewer/public/data/
