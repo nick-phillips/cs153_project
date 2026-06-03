@@ -20,9 +20,9 @@ from . import (
 
 @dataclass
 class Registry:
-    tools: dict  # name -> Tool
+    tools: dict[str, Tool]  # name -> Tool
 
-    def names(self):
+    def names(self) -> list[str]:
         return list(self.tools)
 
     def anthropic_schemas(self) -> list:

@@ -1,7 +1,5 @@
 """Tests for DataContext internal-stats primitives."""
 
-import math
-
 from biomarker_agent.datactx import DataContext
 
 

@@ -1,6 +1,5 @@
 """Tests for assembling the tool registry."""
 
-from pathlib import Path
 
 from biomarker_agent.datactx import DataContext
 from biomarker_agent.tools import build_registry
