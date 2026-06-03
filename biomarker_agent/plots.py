@@ -116,3 +116,68 @@ def passing_importance(features: list, path) -> str:
     ax.grid(axis="y", visible=False)
     ax.legend(loc="lower right")
     return finalize(fig, path)
+
+
+def string_network(genes: list, interactions: list, path) -> str:
+    """Circular-layout interaction graph among genes; edge width ~ score."""
+    n = len(genes)
+    if n == 0:
+        raise ValueError("no genes")
+    angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
+    pos = {g: (np.cos(a), np.sin(a)) for g, a in zip(genes, angles)}
+    fig, ax = plt.subplots(figsize=(5.5, 5.5))
+    for e in interactions:
+        a, b, s = e.get("a"), e.get("b"), float(e.get("score", 0))
+        if a in pos and b in pos:
+            (x1, y1), (x2, y2) = pos[a], pos[b]
+            ax.plot([x1, x2], [y1, y2], color=PALETTE["secondary"],
+                    linewidth=0.5 + 3 * s, alpha=0.6, zorder=1)
+    xs = [pos[g][0] for g in genes]
+    ys = [pos[g][1] for g in genes]
+    ax.scatter(xs, ys, s=320, color=PALETTE["primary"], zorder=2, edgecolor="white", linewidth=1.2)
+    for g in genes:
+        ax.annotate(g, pos[g], ha="center", va="center", fontsize=9,
+                    color="white", zorder=3, fontweight="bold")
+    ax.set_title(f"STRING interactions ({len(interactions)} edges)")
+    ax.set_xlim(-1.4, 1.4)
+    ax.set_ylim(-1.4, 1.4)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    return finalize(fig, path)
+
+
+def mutation_frequency(counts: list, path) -> str:
+    """Bar of per-gene mutated-sample counts (cBioPortal)."""
+    if not counts:
+        raise ValueError("no counts")
+    items = sorted(counts, key=lambda c: c[1], reverse=True)
+    names = [c[0] for c in items]
+    vals = [c[1] for c in items]
+    fig, ax = plt.subplots(figsize=(0.6 * len(items) + 2.5, 4))
+    bars = ax.bar(range(len(items)), vals, color=PALETTE["primary"], alpha=0.85)
+    ax.set_xticks(range(len(items)), names, rotation=45, ha="right")
+    ax.set_ylabel("mutated samples")
+    ax.set_title("cBioPortal somatic mutation frequency")
+    ax.grid(axis="x", visible=False)
+    ax.bar_label(bars, fmt="%d", fontsize=8, padding=2)
+    return finalize(fig, path)
+
+
+def pathway_membership(mapping: dict, path, max_pathways: int = 15) -> str:
+    """Genes x pathways binary membership heatmap (pathway convergence)."""
+    if not mapping:
+        raise ValueError("no pathway mapping")
+    from collections import Counter
+    freq = Counter(p for paths in mapping.values() for p in paths)
+    pathways = [p for p, _ in freq.most_common(max_pathways)]
+    if not pathways:
+        raise ValueError("no pathways")
+    genes = list(mapping)
+    mat = np.array([[1 if p in mapping[g] else 0 for p in pathways] for g in genes], dtype=float)
+    fig, ax = plt.subplots(figsize=(0.45 * len(pathways) + 3, 0.5 * len(genes) + 2))
+    ax.imshow(mat, cmap="Blues", vmin=0, vmax=1, aspect="auto")
+    ax.set_xticks(range(len(pathways)), pathways, rotation=45, ha="right", fontsize=8)
+    ax.set_yticks(range(len(genes)), genes)
+    ax.set_title("Reactome pathway membership")
+    ax.grid(False)
+    return finalize(fig, path)
