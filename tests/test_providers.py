@@ -24,7 +24,9 @@ def test_translate_messages_and_tools():
         ]},
     ]
     oai = providers._to_openai_messages(system, messages)
-    assert oai[0] == {"role": "system", "content": "be helpful"}
+    # system carries a cache_control breakpoint -> content-part array form
+    assert oai[0] == {"role": "system", "content": [
+        {"type": "text", "text": "be helpful", "cache_control": {"type": "ephemeral"}}]}
     assert oai[1] == {"role": "user", "content": "ctx"}
     # assistant turn carries text + a tool_call with JSON-string arguments
     asst = oai[2]
@@ -42,6 +44,24 @@ def test_translate_messages_and_tools():
     assert otools[0]["type"] == "function"
     assert otools[0]["function"]["name"] == "drug_context"
     assert otools[0]["function"]["parameters"] == {"type": "object", "properties": {}}
+
+
+def test_cache_control_preserved_on_seed_context():
+    system = [{"type": "text", "text": "sys", "cache_control": {"type": "ephemeral"}}]
+    messages = [{"role": "user", "content": [
+        {"type": "text", "text": "SEED", "cache_control": {"type": "ephemeral"}}]}]
+    oai = providers._to_openai_messages(system, messages)
+    assert oai[0]["content"][0]["cache_control"] == {"type": "ephemeral"}
+    seed = oai[1]
+    assert seed["role"] == "user"
+    assert seed["content"][0]["text"] == "SEED"
+    assert seed["content"][0]["cache_control"] == {"type": "ephemeral"}
+
+
+def test_no_cache_control_stays_string():
+    oai = providers._to_openai_messages("plain system", [{"role": "user", "content": "hi"}])
+    assert oai[0] == {"role": "system", "content": "plain system"}
+    assert oai[1] == {"role": "user", "content": "hi"}
 
 
 def test_create_returns_anthropic_style_blocks(monkeypatch):

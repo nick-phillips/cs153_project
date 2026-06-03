@@ -40,12 +40,33 @@ def _system_text(system) -> str:
     return "\n".join(p for p in parts if p)
 
 
+def _system_content(system):
+    """System content for OpenAI form, preserving cache_control breakpoints.
+
+    Returns a content-part array when any block carries cache_control (so prompt
+    caching works on OpenRouter), otherwise a plain string.
+    """
+    if isinstance(system, str):
+        return system or None
+    parts, has_cache = [], False
+    for b in system or []:
+        if isinstance(b, dict) and b.get("text"):
+            part = {"type": "text", "text": b["text"]}
+            if b.get("cache_control"):
+                part["cache_control"] = b["cache_control"]
+                has_cache = True
+            parts.append(part)
+    if not parts:
+        return None
+    return parts if has_cache else "\n".join(p["text"] for p in parts)
+
+
 def _to_openai_messages(system, messages: list) -> list:
     """Translate the agent's Anthropic-style message history into OpenAI form."""
     out: list = []
-    sys_text = _system_text(system)
-    if sys_text:
-        out.append({"role": "system", "content": sys_text})
+    sys_content = _system_content(system)
+    if sys_content:
+        out.append({"role": "system", "content": sys_content})
 
     for m in messages:
         role, content = m["role"], m["content"]
@@ -53,15 +74,26 @@ def _to_openai_messages(system, messages: list) -> list:
             if isinstance(content, str):
                 out.append({"role": "user", "content": content})
                 continue
-            texts = []
+            text_blocks = []
             for blk in content:
                 if blk.get("type") == "tool_result":
                     out.append({"role": "tool", "tool_call_id": blk["tool_use_id"],
                                 "content": blk.get("content", "")})
                 elif blk.get("type") == "text":
-                    texts.append(blk.get("text", ""))
-            if texts:
-                out.append({"role": "user", "content": "\n".join(texts)})
+                    text_blocks.append(blk)
+            if text_blocks:
+                if any(b.get("cache_control") for b in text_blocks):
+                    # preserve cache breakpoints (e.g. the static seed context)
+                    parts = []
+                    for b in text_blocks:
+                        part = {"type": "text", "text": b.get("text", "")}
+                        if b.get("cache_control"):
+                            part["cache_control"] = b["cache_control"]
+                        parts.append(part)
+                    out.append({"role": "user", "content": parts})
+                else:
+                    out.append({"role": "user",
+                                "content": "\n".join(b.get("text", "") for b in text_blocks)})
         elif role == "assistant":
             texts, tool_calls = [], []
             for blk in (content if isinstance(content, list) else []):
@@ -141,12 +173,14 @@ class OpenAICompatClient:
         self.total_cost = 0.0
         self.total_prompt_tokens = 0
         self.total_completion_tokens = 0
+        self.total_cached_tokens = 0
         self.n_calls = 0
 
     def usage_totals(self) -> dict:
         return {"cost_usd": round(self.total_cost, 6),
                 "prompt_tokens": self.total_prompt_tokens,
                 "completion_tokens": self.total_completion_tokens,
+                "cached_tokens": self.total_cached_tokens,
                 "n_calls": self.n_calls}
 
     def _record_usage(self, data: dict) -> None:
@@ -154,6 +188,8 @@ class OpenAICompatClient:
         self.total_cost += float(u.get("cost") or 0.0)
         self.total_prompt_tokens += int(u.get("prompt_tokens") or 0)
         self.total_completion_tokens += int(u.get("completion_tokens") or 0)
+        cached = (u.get("prompt_tokens_details") or {}).get("cached_tokens") or 0
+        self.total_cached_tokens += int(cached)
         self.n_calls += 1
 
     def _post(self, body: dict) -> dict:

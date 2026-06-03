@@ -31,7 +31,11 @@ def run_agent(client, registry, system_prompt: str, seed_context: str,
     """
     tools = registry.anthropic_schemas() + [REPORT_TOOL]
     system = [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]
-    messages = [{"role": "user", "content": seed_context}]
+    # Mark the (static, large) seed context as a cache breakpoint so the whole
+    # prefix (tools + system + seed) is cached and re-read cheaply on later turns.
+    messages = [{"role": "user",
+                 "content": [{"type": "text", "text": seed_context,
+                              "cache_control": {"type": "ephemeral"}}]}]
     transcript = []
     used = 0
 
