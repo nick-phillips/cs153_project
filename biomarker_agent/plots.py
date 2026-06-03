@@ -119,28 +119,45 @@ def passing_importance(features: list, path) -> str:
 
 
 def string_network(genes: list, interactions: list, path) -> str:
-    """Circular-layout interaction graph among genes; edge width ~ score."""
+    """Circular-layout interaction graph among genes; edge width ~ score.
+
+    Gene labels are placed radially outside their node so they never overflow the
+    marker or clip at the figure edge.
+    """
     n = len(genes)
     if n == 0:
         raise ValueError("no genes")
-    angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
-    pos = {g: (np.cos(a), np.sin(a)) for g, a in zip(genes, angles)}
-    fig, ax = plt.subplots(figsize=(5.5, 5.5))
+    # Single node sits at the center; otherwise spread around a circle. Start at
+    # the top (pi/2) and go clockwise for a tidy layout.
+    if n == 1:
+        pos = {genes[0]: (0.0, 0.0)}
+    else:
+        angles = [np.pi / 2 - 2 * np.pi * i / n for i in range(n)]
+        pos = {g: (np.cos(a), np.sin(a)) for g, a in zip(genes, angles)}
+
+    fig, ax = plt.subplots(figsize=(6, 6))
     for e in interactions:
         a, b, s = e.get("a"), e.get("b"), float(e.get("score", 0))
         if a in pos and b in pos:
             (x1, y1), (x2, y2) = pos[a], pos[b]
             ax.plot([x1, x2], [y1, y2], color=PALETTE["secondary"],
-                    linewidth=0.5 + 3 * s, alpha=0.6, zorder=1)
+                    linewidth=0.6 + 3 * s, alpha=0.55, zorder=1, solid_capstyle="round")
     xs = [pos[g][0] for g in genes]
     ys = [pos[g][1] for g in genes]
-    ax.scatter(xs, ys, s=320, color=PALETTE["primary"], zorder=2, edgecolor="white", linewidth=1.2)
+    ax.scatter(xs, ys, s=260, color=PALETTE["primary"], zorder=2,
+               edgecolor="white", linewidth=1.5)
     for g in genes:
-        ax.annotate(g, pos[g], ha="center", va="center", fontsize=9,
-                    color="white", zorder=3, fontweight="bold")
+        x, y = pos[g]
+        # push the label radially outward; align away from the marker
+        r = (x ** 2 + y ** 2) ** 0.5 or 1.0
+        lx, ly = x + 0.16 * x / r, y + 0.16 * y / r
+        ha = "center" if abs(x) < 0.3 else ("left" if x > 0 else "right")
+        va = "center" if abs(y) < 0.3 else ("bottom" if y > 0 else "top")
+        ax.annotate(g, (lx, ly), ha=ha, va=va, fontsize=10,
+                    color=PALETTE["neutral"], zorder=3, fontweight="bold")
     ax.set_title(f"STRING interactions ({len(interactions)} edges)")
-    ax.set_xlim(-1.4, 1.4)
-    ax.set_ylim(-1.4, 1.4)
+    ax.set_xlim(-1.7, 1.7)
+    ax.set_ylim(-1.7, 1.7)
     ax.set_aspect("equal")
     ax.axis("off")
     return finalize(fig, path)
