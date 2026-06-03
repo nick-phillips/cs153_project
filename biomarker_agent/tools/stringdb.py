@@ -18,7 +18,10 @@ INPUT_SCHEMA = {
 
 def make_tool(cache: DiskCache) -> Tool:
     def handler(genes: list, species: int = 9606) -> dict:
-        ids = "%0d".join(genes)
+        # STRING expects identifiers separated by a carriage-return/newline;
+        # requests percent-encodes it correctly. (A literal "%0d" would be
+        # double-encoded to "%250d" and break multi-gene queries.)
+        ids = "\r".join(genes)
         params = {"identifiers": ids, "species": species, "caller_identity": "biomarker_agent"}
         network = cache.get_or_set(
             f"string:net:{species}:{','.join(sorted(genes))}",
