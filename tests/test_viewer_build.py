@@ -1,6 +1,8 @@
 """Tests for the viewer data build step."""
 
-from biomarker_agent.viewer_build import build, index_entry, parse_gene  # noqa: F401
+import json
+
+from biomarker_agent.viewer_build import build, index_entry, parse_gene
 
 
 def test_parse_gene_strips_class_prefix():
@@ -56,3 +58,57 @@ def test_index_entry_no_hypothesis():
     assert e["top_hypothesis_title"] is None
     assert e["refit_features"] == []
     assert e["search_genes"] == []
+
+
+def _write_compound(d, report, trace=None, figures=()):
+    d.mkdir(parents=True)
+    (d / "report.json").write_text(json.dumps(report))
+    if trace is not None:
+        (d / "trace.json").write_text(json.dumps(trace))
+    if figures:
+        fd = d / "figures"
+        fd.mkdir()
+        for name in figures:
+            (fd / name).write_bytes(b"\x89PNG\r\n")
+
+
+def test_build_writes_bundle_and_copies_figures(tmp_path):
+    results = tmp_path / "results"
+    _write_compound(
+        results / "C1",
+        {
+            "compound_id": "BRD:1", "clear_hypothesis": True,
+            "meta": {"drug_name": "DrugA", "feature_comparison": {
+                "baseline_model": "random_forest", "n_refit": 1, "n_baseline_top": 10,
+                "shared": ["shRNA_MDM4"], "refit_only": [], "baseline_only": [],
+                "divergence": "low"}},
+            "hypotheses": [{"rank": 1, "title": "T", "features": ["shRNA_MDM4"],
+                            "figures": [{"path": "figures/a.png", "caption": "c"}]}],
+        },
+        trace={"compound_id": "BRD:1", "model": "m", "usage": {"cost_usd": 0.1},
+               "seed_context": "s", "transcript": [{"event": "assistant_text", "text": "hi"}]},
+        figures=["a.png"],
+    )
+    _write_compound(
+        results / "C2",
+        {"compound_id": "BRD:2", "clear_hypothesis": False,
+         "meta": {"drug_name": "DrugB"}, "hypotheses": []},
+    )
+    (results / "junk").mkdir()  # no report.json -> skipped
+
+    out = tmp_path / "out"
+    summary = build(results, out)
+    assert summary["n_compounds"] == 2
+
+    index = json.loads((out / "index.json").read_text())
+    assert {e["id"] for e in index} == {"C1", "C2"}
+
+    c1 = json.loads((out / "C1.json").read_text())
+    assert c1["trace"]["model"] == "m"
+    assert c1["id"] == "C1"
+    assert (out / "C1" / "figures" / "a.png").exists()
+
+    c2 = json.loads((out / "C2.json").read_text())
+    assert c2["trace"] is None
+    entry2 = next(e for e in index if e["id"] == "C2")
+    assert entry2["has_hypothesis"] is False
