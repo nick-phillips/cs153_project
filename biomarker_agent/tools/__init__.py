@@ -16,6 +16,7 @@ from . import (
     pathways,
     stringdb,
 )
+from . import figures as figures_mod
 
 
 @dataclass
@@ -35,7 +36,8 @@ class Registry:
 
 
 def build_registry(data_ctx: DataContext, treatment_info: Path, cache_dir: Path,
-                   literature_backend: str = "pubmed") -> Registry:
+                   literature_backend: str = "pubmed", figures_dir=None,
+                   figures_rel_prefix: str = "figures", compound_result=None) -> Registry:
     cache = DiskCache(cache_dir)
     tools = [
         drug_context.make_tool(treatment_info),
@@ -47,4 +49,9 @@ def build_registry(data_ctx: DataContext, treatment_info: Path, cache_dir: Path,
         pathways.make_tool(cache),
         literature.make_tool(cache, backend=literature_backend),
     ]
+    if figures_dir is not None and compound_result is not None:
+        tools += figures_mod.make_figure_tools(
+            figures_dir=figures_dir, rel_prefix=figures_rel_prefix,
+            data_ctx=data_ctx, compound_result=compound_result, cache=cache,
+        )
     return Registry(tools={t.name: t for t in tools})

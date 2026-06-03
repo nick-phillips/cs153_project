@@ -30,6 +30,8 @@ def run_one(compound_dir, out_dir, feature_file, response_file, treatment_info, 
     registry = build_registry(
         data_ctx=data_ctx, treatment_info=treatment_info, cache_dir=cache_dir,
         literature_backend=literature_backend,
+        figures_dir=Path(out_dir) / "figures", figures_rel_prefix="figures",
+        compound_result=result,
     )
     drug_info = registry.dispatch("drug_context", {"compound_id": result.compound_id})
     internal = context.precompute_internal(result, data_ctx)
