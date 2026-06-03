@@ -37,3 +37,11 @@ def http_post_json(url: str, json_body: dict, headers: dict | None = None,
     resp = requests.post(url, json=json_body, headers=headers, timeout=timeout)
     resp.raise_for_status()
     return resp.json()
+
+
+def http_get_text(url: str, params: dict | None = None, headers: dict | None = None,
+                  timeout: int = DEFAULT_TIMEOUT) -> str:
+    """GET returning the raw response body as text (e.g. for XML endpoints)."""
+    resp = requests.get(url, params=params, headers=headers, timeout=timeout)
+    resp.raise_for_status()
+    return resp.text
