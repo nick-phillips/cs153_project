@@ -17,6 +17,21 @@ def test_disk_cache_roundtrip(tmp_path):
     assert calls["n"] == 1  # second call served from cache
 
 
+def test_disk_cache_does_not_persist_errors(tmp_path):
+    c = cache_mod.DiskCache(tmp_path / "c")
+    calls = {"n": 0}
+
+    def flaky():
+        calls["n"] += 1
+        # first call "fails", second succeeds
+        return {"error": "boom"} if calls["n"] == 1 else {"v": 7}
+
+    assert c.get_or_set("k", flaky) == {"error": "boom"}  # not cached
+    assert c.get_or_set("k", flaky) == {"v": 7}  # re-run, real value now cached
+    assert c.get_or_set("k", flaky) == {"v": 7}  # served from cache
+    assert calls["n"] == 2
+
+
 def test_tool_run_catches_errors():
     def boom(**kwargs):
         raise RuntimeError("kaboom")

@@ -20,5 +20,8 @@ class DiskCache:
         if p.exists():
             return json.loads(p.read_text())
         value = produce()
-        p.write_text(json.dumps(value))
+        # Don't persist failures: an error/empty result from a transient API
+        # hiccup would otherwise be served forever, poisoning future runs.
+        if not (isinstance(value, dict) and "error" in value):
+            p.write_text(json.dumps(value))
         return value
