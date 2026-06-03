@@ -66,7 +66,11 @@ export default function IndexPage() {
       </label>
 
       {results.length === 0 ? (
-        <p className="muted">No compounds match "{query}".</p>
+        <p className="muted">
+          {query.trim()
+            ? `No compounds match "${query}".`
+            : 'No compounds match.'}
+        </p>
       ) : (
         <ul className="compound-list">
           {results.map(({ entry, matchedFields }) => (
