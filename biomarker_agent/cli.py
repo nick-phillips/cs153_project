@@ -40,7 +40,14 @@ def run_one(compound_dir, out_dir, feature_file, response_file, treatment_info, 
         client=client, registry=registry, system_prompt=SYSTEM_PROMPT,
         seed_context=seed, model=model, max_tool_calls=max_tool_calls,
     )
-    paths = report.write_report(payload, Path(out_dir), result.compound_id)
+    meta = {
+        "drug_name": drug_info.get("drug_name"),
+        "moa": drug_info.get("moa"),
+        "targets": drug_info.get("targets"),
+        "n_samples": result.n_samples,
+        "performance": result.metrics,
+    }
+    paths = report.write_report(payload, Path(out_dir), result.compound_id, meta=meta)
     trace_path = Path(out_dir) / "trace.json"
     trace_path.write_text(json.dumps(
         {"compound_id": result.compound_id, "model": model, "seed_context": seed,

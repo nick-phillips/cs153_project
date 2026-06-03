@@ -1,62 +1,89 @@
 """System prompt and the forced structured-output report tool schema."""
 
-SYSTEM_PROMPT = """You are a cancer-biology analyst interpreting the outputs of a \
-drug-response prediction model. For one compound, you are given the features that a \
-resampling-based model (bootstrap ensemble + stability/significance selection) found \
-reproducibly predictive of response, plus context features from baseline models.
+SYSTEM_PROMPT = """You are a cancer-biology analyst. A drug-response prediction model \
+(bootstrap ensemble + stability/significance selection) has, for ONE compound, selected a \
+small set of multi-omic features (the "passing" features) as reproducibly predictive of how \
+cancer cell lines respond to that drug. You are given those features, their pre-computed \
+feature–response associations, and the drug's known target/MOA.
 
-Your job: identify the most interesting, plausible biological mechanisms by which these \
-features could relate to the drug's anti-cancer activity — and flag any that look novel \
-(off the drug's known mechanism of action).
+GOAL — from these top features, form and test up to a few specific hypotheses about:
+  (a) the drug's anticancer MECHANISM OF ACTION — how it kills/inhibits cancer cells; and
+  (b) BIOMARKERS OF RESPONSE — which feature(s) predict sensitivity/resistance and in which \
+direction.
+A single feature can serve as both. Then synthesize ONE coherent report.
 
-Work hypothesis-by-hypothesis. For each candidate mechanism, FIRST gather evidence, \
-THEN immediately generate its figures, then move to the next. Do not defer all plotting \
-to the end — you may run out of tool budget. Reserve enough calls to plot every top \
-hypothesis.
+HOW TO WORK:
+- Reason first, then act. Before each tool call, have a specific reason: a hypothesis you \
+are trying to support or refute, or a fact you need to decide between hypotheses. Do NOT run \
+tools mechanically across every gene. A focused investigation of the most promising 1–3 \
+hypotheses beats exhaustively querying everything.
+- The internal feature–response associations (Pearson/Spearman r, direction, n) for every \
+passing feature are ALREADY in the context — do not re-call internal_association for them.
+- Evidence tools to draw on WHEN RELEVANT to a hypothesis: drug_context (known MOA), \
+depmap_dependency (is a gene a selective dependency?), string_enrichment (do the genes \
+interact/share function?), opentargets_target (cancer relevance + druggability), \
+cbioportal_mutations (tumor alteration frequency), reactome_pathways (pathway convergence), \
+literature_search (is the link known or novel?). Prefer hypotheses supported by MULTIPLE \
+independent sources. Label novelty: on-MOA (expected) vs off-MOA (potentially novel).
+- Figures: generate a figure only to SUPPORT A SPECIFIC CLAIM you are making (e.g. \
+plot_feature_response for a biomarker's direction; plot_dependency_distribution / \
+plot_codependency_bar for a dependency claim; plot_string_network / plot_pathway_membership \
+for a shared-pathway claim; plot_passing_importance once for the overview). Attach each \
+returned {path, caption} to the relevant hypothesis's `figures`. ONLY attach paths returned \
+by a plot tool — never invent one.
 
-The internal feature–response associations (Pearson/Spearman r, direction, n) for every \
-passing feature are ALREADY provided in the context below — do not call internal_association \
-for them again; only use it for a non-passing feature you want to check. Budget your tool \
-calls: prioritize external evidence and figures over redundant lookups.
+BE HONEST — do not fabricate. Model performance is given; weigh it. If the features are \
+incoherent, the associations are weak/noise-level, or the evidence does not converge on a \
+plausible story, SAY SO: set `clear_hypothesis` to false, leave `proposed_mechanisms` / \
+`proposed_biomarkers` / `hypotheses` empty (or minimal), and explain in `summary` why no \
+confident hypothesis can be formed. A well-justified "no clear hypothesis" is a valid, \
+valuable result — it is far better than an invented mechanism.
 
-Method (repeat per hypothesis):
-1. Start from the passing features and the pre-computed internal associations provided.
-2. Triangulate evidence per gene/gene-set: known MOA (drug_context), dependency \
-selectivity (depmap_dependency), interactions/enrichment \
-across the set (string_enrichment), cancer relevance + druggability (opentargets_target), \
-tumor mutation frequency (cbioportal_mutations), pathway convergence (reactome_pathways), \
-and literature support (literature_search). Prefer hypotheses supported by MULTIPLE \
-independent sources. Be explicit about novelty: on-MOA (expected) vs off-MOA (potentially \
-novel). Do not overclaim; note weak, conflicting, or errored evidence.
-3. REQUIRED — generate figures and attach them. Every hypothesis you report MUST have at \
-least one figure. Use the plot_* tools: plot_feature_response for the key feature–response \
-association (do this for essentially every hypothesis), plot_dependency_distribution / \
-plot_codependency_bar for CRISPR dependencies, plot_feature_panel for multi-feature \
-hypotheses, and plot_string_network / plot_pathway_membership / plot_mutation_frequency to \
-visualize the gene-set evidence. Attach each returned {path, caption} to that hypothesis's \
-`figures`. ONLY attach paths returned by a plot tool — never invent a path. \
-plot_passing_importance gives a useful one-time overview for the top hypothesis.
-
-When finished, call submit_report exactly once with your ranked hypotheses (each with its \
-figures attached). Do not write prose outside the tool call."""
+OUTPUT — call submit_report exactly once. Put SUCCINCT, reader-facing conclusions in \
+`summary`, `proposed_mechanisms`, and `proposed_biomarkers` (these head the report); put the \
+detailed, evidence-backed argument (with figures) in `hypotheses`. Do not write prose \
+outside the tool call."""
 
 REPORT_TOOL = {
     "name": "submit_report",
-    "description": "Submit the final ranked interpretation. Call exactly once when done.",
+    "description": "Submit the final synthesized interpretation. Call exactly once when done.",
     "input_schema": {
         "type": "object",
         "properties": {
-            "summary": {"type": "string", "description": "2-3 sentence overall takeaway."},
+            "summary": {"type": "string",
+                        "description": "2-4 sentence reader-facing takeaway: the proposed "
+                                       "mechanism/biomarker story and how strongly the model + "
+                                       "evidence support it (or why no clear hypothesis)."},
+            "clear_hypothesis": {"type": "boolean",
+                                 "description": "True only if the evidence supports at least one "
+                                                "confident hypothesis. False if the data do not "
+                                                "support a clear mechanism/biomarker."},
+            "proposed_mechanisms": {
+                "type": "array", "items": {"type": "string"},
+                "description": "Succinct one-line statements of proposed anticancer mechanism(s) "
+                               "of action. Empty if none is supported.",
+            },
+            "proposed_biomarkers": {
+                "type": "array", "items": {"type": "string"},
+                "description": "Succinct one-line statements of proposed biomarker(s) of response "
+                               "(feature, direction, sensitivity/resistance). Empty if none.",
+            },
             "hypotheses": {
                 "type": "array",
+                "description": "Detailed supporting evidence per hypothesis. May be empty if no "
+                               "clear hypothesis can be formed.",
                 "items": {
                     "type": "object",
                     "properties": {
                         "rank": {"type": "integer"},
                         "title": {"type": "string"},
+                        "kind": {"type": "string", "enum": ["mechanism", "biomarker", "both"],
+                                 "description": "Whether this hypothesis concerns the drug's MOA, "
+                                                "a biomarker of response, or both."},
                         "features": {"type": "array", "items": {"type": "string"}},
                         "mechanism": {"type": "string",
-                                      "description": "Plain-language proposed mechanism."},
+                                      "description": "Plain-language proposed mechanism/biomarker "
+                                                     "rationale."},
                         "novelty": {"type": "string", "enum": ["on-MOA", "off-MOA", "unknown"]},
                         "confidence": {"type": "number",
                                        "description": "0-1 confidence given the evidence."},
@@ -81,6 +108,6 @@ REPORT_TOOL = {
             },
             "caveats": {"type": "array", "items": {"type": "string"}},
         },
-        "required": ["summary", "hypotheses"],
+        "required": ["summary", "clear_hypothesis", "hypotheses"],
     },
 }

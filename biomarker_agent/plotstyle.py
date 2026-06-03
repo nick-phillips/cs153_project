@@ -1,5 +1,6 @@
 """Shared, publication-quality matplotlib styling for agent figures."""
 
+import warnings
 from pathlib import Path
 
 import matplotlib
@@ -54,6 +55,11 @@ def finalize(fig, path) -> str:
     """Save at 300 DPI and close the figure. Returns the path as a string."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(path)
+    # Figures with many long rotated tick labels can make constrained_layout give
+    # up ("axes sizes collapsed to zero"); this is benign because savefig uses
+    # bbox_inches="tight", which still captures every label. Silence the noise.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*constrained_layout.*")
+        fig.savefig(path)
     plt.close(fig)
     return str(path)
