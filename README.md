@@ -1,10 +1,16 @@
 # Problem Description
-Interpretation of large-scale cancer cell line screening data is challenging. Artificial intelligence tools have the potential to significantly increase the throughput and depth of such analyses, enabling hypothesis generation and biomarker discovery. In this project, we develop an agentic system for biological discovery using the PRISM multiplexed drug screen. We demonstrate the system's utility in generating novel hypotheses through use of custom analysis tools and biological data APIs. We envision this system can be applied to aid in the characterization of novel mechanisms of cancer drug activity and to nominate candidates for experimental validation.
+Interpretation of large-scale cancer cell line screening data is challenging. Elucidating biomarkers and drug mechanisms of action often requires domain expertise and extensive research.
+
+Artificial intelligence tools have the potential to significantly increase the throughput and depth of such analyses. In this project, we develop an agentic system for biological discovery using data from the PRISM multiplexed drug screen. We demonstrate the system's utility in generating novel hypotheses through the use of custom analysis tools and biological data APIs.
+
+We envision this system can be applied to aid in the characterization of novel mechanisms of cancer drug activity and to nominate candidates for experimental validation.
 
 ## Statistical Analysis for Biomarker Discovery
 
-This code is used to generate upstream feature importance values for the agentic workflow. Benchmarks drug response prediction baselines (ElasticNet, RF, XGBoost,
+This code is used to generate upstream feature importance values for the agentic workflow. It benchmarks drug response prediction baselines (ElasticNet, RF, XGBoost,
 CatBoost) with correlation-based feature selection and SHAP feature importance.
+
+This step is computationally expensive and pre-computed results are available on request.
 
 ## Usage
 To run a single compound:
