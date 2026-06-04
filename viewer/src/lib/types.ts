@@ -87,6 +87,7 @@ export interface CompoundData {
   id: string;
   compound_id: string;
   meta: Meta;
+  headline?: string;
   summary: string;
   clear_hypothesis: boolean;
   hypotheses: Hypothesis[];

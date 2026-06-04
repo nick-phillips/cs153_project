@@ -445,11 +445,88 @@ body {
 /* Markdown prose inside report */
 .report p { margin: 0 0 0.7rem; }
 
+/* ─── Digest: headline + finding subheadings (always visible) ───────────────── */
+.headline {
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--gray-900);
+  margin: 0 0 1rem;
+  padding-left: 0.85rem;
+  border-left: 4px solid var(--blue-600);
+}
+.findings {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1.1rem;
+}
+.finding-block {
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+}
+.finding-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--blue-700);
+  margin-bottom: 0.3rem;
+}
+.finding-block ul { margin: 0; padding-left: 1.1rem; }
+.finding-block li { margin-bottom: 0.2rem; }
+.summary-block {
+  color: var(--gray-700);
+  margin-bottom: 1.25rem;
+}
+.summary-block p:last-child { margin-bottom: 0; }
+
+/* ─── Drill-downs (collapsible supporting material) ─────────────────────────── */
+.drill {
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  margin-bottom: 0.7rem;
+  overflow: hidden;
+}
+.drill > summary {
+  cursor: pointer;
+  padding: 0.6rem 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  background: var(--gray-50);
+  list-style: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.drill > summary::-webkit-details-marker { display: none; }
+.drill > summary::before {
+  content: '▶';
+  font-size: 0.6em;
+  color: var(--gray-400);
+  transition: transform 0.15s;
+}
+.drill[open] > summary::before { transform: rotate(90deg); }
+.drill > summary:hover { background: var(--blue-50); }
+.drill > summary:focus-visible { outline: 2px solid var(--blue-600); outline-offset: -2px; }
+.drill-body { padding: 1rem 0.95rem; }
+.drill-body > *:first-child { margin-top: 0; }
+
+.hypothesis-detail .hyp-head { margin-bottom: 0.5rem; }
+.hypothesis-detail .features { font-size: 0.85rem; margin: 0.3rem 0 0.5rem; }
+
 /* ─── SHAP row ─────────────────────────────────────────────────────────────── */
+/* 2x2 grid: SHAP panels (top row) + predicted-vs-actual & response
+   distribution (bottom row). */
 .shap-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem 1.25rem;
   align-items: start;
 }
 .shap-row .figure { min-width: 0; margin: 0; }
