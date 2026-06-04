@@ -1,6 +1,9 @@
-# biomarker-discovery
+# Problem Description
+Interpretation of large-scale cancer cell line screening data is challenging. Artificial intelligence tools have the potential to significantly increase the throughput and depth of such analyses, enabling hypothesis generation and biomarker discovery. In this project, we develop an agentic system for biological discovery using the PRISM multiplexed drug screen. We demonstrate the system's utility in generating novel hypotheses through use of custom analysis tools and biological data APIs. We envision this system can be applied to aid in the characterization of novel mechanisms of cancer drug activity and to nominate candidates for experimental validation.
 
-Benchmarks drug response prediction baselines (ElasticNet, RF, XGBoost,
+## Statistical Analysis for Biomarker Discovery
+
+This code is used to generate upstream feature importance values for the agentic workflow. Benchmarks drug response prediction baselines (ElasticNet, RF, XGBoost,
 CatBoost) with correlation-based feature selection and SHAP feature importance.
 
 ## Usage
@@ -14,7 +17,7 @@ uv run scripts/run_benchmark.py \
     --n_folds 5
 ```
 
-## Interpretation agent + viewer
+## Interpretation Agent + Viewer
 
 After running the benchmark, interpret the selected biomarkers with an LLM agent
 that proposes the mechanism/biomarker the model's output supports, scores it with a
@@ -33,3 +36,6 @@ uv run python viewer/scripts/build_data.py --results data/interpretation_results
     --source data/priority_samples --responses data/responses_primary_v4.pkl
 cd viewer && npm install && npm run dev      # → http://localhost:5173/
 ```
+
+## AI Usage Disclosure
+AI assistance with Claude Code was used extensively in generating all code for this project. External data sources and APIs are described in the biomarker agent documentation.
