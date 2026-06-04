@@ -30,6 +30,11 @@ def render_markdown(payload: dict, compound_id: str, meta: dict | None = None) -
     meta = meta or {}
     lines = [f"# Interpretation report — {compound_id}", ""]
 
+    headline = payload.get("headline")
+    if headline:
+        lines.append(f"> **{headline}**")
+        lines.append("")
+
     # --- Header: drug context + deterministic model performance ---
     drug = meta.get("drug_name")
     moa = meta.get("moa")

@@ -21,15 +21,25 @@ def build_seed_context(result: CompoundResult, drug_info: dict, internal: dict) 
         f"bootstrap={m.get('bootstrap_pred_pearson')}, "
         f"baseline={m.get('baseline_pred_pearson')}"
     )
+    lines.append(
+        "RESPONSE CONVENTION: response is a drug-response score where LOWER = greater "
+        "SENSITIVITY (more cell killing) and HIGHER = RESISTANCE. So a NEGATIVE "
+        "feature-response correlation means higher feature value -> greater sensitivity; "
+        "a POSITIVE correlation means higher feature value -> greater resistance. State "
+        "biomarker directions in sensitivity/resistance terms and double-check the sign."
+    )
     lines.append(f"Passing features by class: {json.dumps(result.passing_by_class)}")
     lines.append("\n### Passing features (resampled model: significant + stable)")
     for f in result.passing_features:
         assoc = internal.get(f.name, {})
+        implies = assoc.get("higher_feature_implies")
+        implies_txt = f"; higher {f.gene} -> {implies}" if implies else ""
         lines.append(
             f"- {f.name} (class={f.feature_class}, gene={f.gene}): "
             f"reproducibility={f.reproducibility}, q={f.q_value:.2e}, "
             f"real_importance={f.mean_real_importance:.4f} (null={f.mean_null_importance:.4f}); "
-            f"internal assoc r={assoc.get('pearson_r')} ({assoc.get('direction')}, n={assoc.get('n')})"
+            f"internal assoc r={assoc.get('pearson_r')} ({assoc.get('direction')}, "
+            f"n={assoc.get('n')}){implies_txt}"
         )
     if result.baseline_top_features:
         lines.append("\n### Top baseline-model SHAP features (context/contrast)")

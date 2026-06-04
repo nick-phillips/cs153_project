@@ -6,6 +6,13 @@ from pathlib import Path
 import pandas as pd
 from scipy import stats
 
+# Response values are drug-response scores where LOWER = greater sensitivity
+# (more cell killing) and HIGHER = resistance. A NEGATIVE feature-response
+# correlation therefore means a higher feature value tracks greater sensitivity.
+RESPONSE_CONVENTION = (
+    "lower response = greater sensitivity (more cell killing); higher = resistance"
+)
+
 
 class DataContext:
     """Holds the big pkl matrices, loaded once, and computes feature stats."""
@@ -49,6 +56,15 @@ class DataContext:
         else:
             mw_p, diff_high, diff_low = float("nan"), float("nan"), float("nan")
 
+        # Translate the correlation sign into sensitivity terms using the fixed
+        # response convention (lower response = more sensitive). A negative r
+        # means higher feature value -> lower response -> greater sensitivity.
+        higher_feature_implies = "greater sensitivity" if pr < 0 else "greater resistance"
+        if diff_high == diff_high and diff_low == diff_low:
+            more_sensitive_tertile = "high" if diff_high < diff_low else "low"
+        else:
+            more_sensitive_tertile = None
+
         return {
             "feature": feature_name,
             "compound": compound_id,
@@ -61,6 +77,9 @@ class DataContext:
             "diff_low_resp_mean": round(diff_low, 4) if diff_low == diff_low else None,
             "diff_mannwhitney_p": float(mw_p) if mw_p == mw_p else None,
             "direction": "positive" if pr >= 0 else "negative",
+            "response_convention": RESPONSE_CONVENTION,
+            "higher_feature_implies": higher_feature_implies,
+            "more_sensitive_tertile": more_sensitive_tertile,
         }
 
     def dependency_profile(self, gene: str, threshold: float = -0.5) -> dict:
