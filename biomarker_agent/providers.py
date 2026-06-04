@@ -125,6 +125,27 @@ def _to_openai_tools(tools: list) -> list:
     ]
 
 
+def _parse_body(resp):
+    """Parse an OpenAI-style JSON response body, tolerating OpenRouter's SSE
+    keep-alive comment lines.
+
+    On slow non-streaming requests OpenRouter prepends ``: OPENROUTER PROCESSING``
+    comment lines to keep the connection alive; these are not valid JSON, so a
+    plain ``resp.json()`` raises JSONDecodeError at the first such line (and the
+    offset grows the longer the upstream takes). Strip anything before the first
+    ``{`` and re-parse; if that still fails, let the error propagate so the caller
+    can retry.
+    """
+    try:
+        return resp.json()
+    except ValueError:
+        text = resp.text or ""
+        start = text.find("{")
+        if start > 0:
+            return json.loads(text[start:])
+        raise
+
+
 def _to_blocks(message: dict) -> list:
     blocks = []
     text = message.get("content")
@@ -208,10 +229,13 @@ class OpenAICompatClient:
                     last_exc = RuntimeError(f"HTTP {resp.status_code} from provider")
                 else:
                     resp.raise_for_status()
-                    data = resp.json()
+                    data = _parse_body(resp)
                     self._record_usage(data)
                     return data
             except _RETRYABLE as exc:
+                last_exc = exc
+            except json.JSONDecodeError as exc:
+                # malformed/truncated body (e.g. OpenRouter keep-alive noise) — retry
                 last_exc = exc
             if attempt < MAX_RETRIES:
                 time.sleep(RETRY_BACKOFF * attempt)

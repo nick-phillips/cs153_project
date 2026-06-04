@@ -192,3 +192,34 @@ def test_create_handles_plain_text_stop(monkeypatch):
     assert resp.stop_reason == "end_turn"
     assert [b.type for b in resp.content] == ["text"]
     assert resp.content[0].text == "done"
+
+
+def test_parse_body_tolerates_openrouter_keepalive_comments():
+    """OpenRouter prepends ': OPENROUTER PROCESSING' SSE comments on slow requests;
+    _parse_body must strip them and recover the JSON instead of raising."""
+    import json as _json
+
+    class R:
+        text = (": OPENROUTER PROCESSING\n\n"
+                ": OPENROUTER PROCESSING\n\n"
+                '{"choices": [{"finish_reason": "stop", "message": {"content": "ok"}}]}')
+
+        def json(self):
+            return _json.loads(self.text)  # raises on the leading ':' comment lines
+
+    data = providers._parse_body(R())
+    assert data["choices"][0]["message"]["content"] == "ok"
+
+
+def test_parse_body_reraises_when_unrecoverable():
+    import json as _json
+    import pytest
+
+    class R:
+        text = "totally not json"
+
+        def json(self):
+            return _json.loads(self.text)
+
+    with pytest.raises(ValueError):
+        providers._parse_body(R())
