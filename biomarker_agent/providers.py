@@ -8,10 +8,14 @@ feature it sets — ``cache_control`` on the system block — is simply dropped 
 """
 
 import json
+import time
 
 import requests
 
-CHAT_TIMEOUT = 120
+CHAT_TIMEOUT = 300  # a single long generation can exceed 2 min
+MAX_RETRIES = 3     # retry transient network errors / 5xx
+RETRY_BACKOFF = 3   # seconds, multiplied by attempt number
+_RETRYABLE = (requests.exceptions.Timeout, requests.exceptions.ConnectionError)
 _FINISH_MAP = {
     "tool_calls": "tool_use",
     "stop": "end_turn",
@@ -195,9 +199,20 @@ class OpenAICompatClient:
     def _post(self, body: dict) -> dict:
         headers = {"Authorization": f"Bearer {self.api_key}",
                    "Content-Type": "application/json", **self.extra_headers}
-        resp = requests.post(f"{self.base_url}/chat/completions", json=body,
-                             headers=headers, timeout=self.timeout)
-        resp.raise_for_status()
-        data = resp.json()
-        self._record_usage(data)
-        return data
+        last_exc = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                resp = requests.post(f"{self.base_url}/chat/completions", json=body,
+                                     headers=headers, timeout=self.timeout)
+                if resp.status_code >= 500:
+                    last_exc = RuntimeError(f"HTTP {resp.status_code} from provider")
+                else:
+                    resp.raise_for_status()
+                    data = resp.json()
+                    self._record_usage(data)
+                    return data
+            except _RETRYABLE as exc:
+                last_exc = exc
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_BACKOFF * attempt)
+        raise last_exc

@@ -8,15 +8,15 @@ from pathlib import Path
 
 from PIL import Image
 
-# Downscaled width (px) for header SHAP panels so two render side by side.
-SHAP_PANEL_WIDTH = 430
-
 from . import context, report
 from .agent import DEFAULT_MODEL, run_agent
 from .datactx import DataContext
 from .loader import find_compounds, load_compound, refit_vs_baseline
 from .prompts import SYSTEM_PROMPT
 from .tools import build_registry
+
+# Downscaled width (px) for header SHAP panels so two render side by side.
+SHAP_PANEL_WIDTH = 430
 
 DATA = Path("data")
 
@@ -140,20 +140,32 @@ def main(argv=None):
     client = _make_client(args.provider, args.base_url)
     compounds = find_compounds(Path(args.target))
     index_lines = ["# Interpretation index", ""]
+    failures = []
     for cdir in compounds:
         out_dir = Path(args.out) / cdir.name if args.out else cdir / "interpretation"
-        paths = run_one(
-            compound_dir=cdir, out_dir=out_dir,
-            feature_file=Path(args.feature_file), response_file=Path(args.response_file),
-            treatment_info=Path(args.treatment_info), cache_dir=Path(args.cache_dir),
-            client=client, model=model, literature_backend=args.literature,
-            max_tool_calls=args.max_tool_calls,
-        )
+        # Isolate each compound: a transient failure (e.g. an API timeout) on one
+        # must not abort the whole batch — log it, keep that compound's prior
+        # output, and continue.
+        try:
+            paths = run_one(
+                compound_dir=cdir, out_dir=out_dir,
+                feature_file=Path(args.feature_file), response_file=Path(args.response_file),
+                treatment_info=Path(args.treatment_info), cache_dir=Path(args.cache_dir),
+                client=client, model=model, literature_backend=args.literature,
+                max_tool_calls=args.max_tool_calls,
+            )
+        except Exception as exc:  # noqa: BLE001 - batch resilience
+            print(f"[FAILED] {cdir.name}: {type(exc).__name__}: {exc}")
+            failures.append(cdir.name)
+            continue
         print(f"[done] {cdir.name} -> {paths['markdown']}")
         index_lines.append(f"- {cdir.name}: {paths['markdown']}")
 
     if len(compounds) > 1 and args.out:
         (Path(args.out) / "interpretation_index.md").write_text("\n".join(index_lines) + "\n")
+    if failures:
+        print(f"[warn] {len(failures)} of {len(compounds)} compound(s) failed: "
+              f"{', '.join(failures)}. Re-run the command to retry them.")
 
 
 if __name__ == "__main__":
