@@ -1,8 +1,55 @@
 import ReactMarkdown from 'react-markdown';
-import type { CompoundData } from '../lib/types';
+import type { CompoundData, FeatureDisposition } from '../lib/types';
 import { figureUrl } from '../lib/data';
 import Figure from './Figure';
 import RefitBaselineTable from './RefitBaselineTable';
+
+// Overall hypothesis strength (0..1): 0 = no clear mechanism/biomarker,
+// 1 = definite, obvious biomarker & mechanism. Judged on biology/evidence.
+function strengthLabel(v: number): string {
+  if (v < 0.2) return 'no clear hypothesis';
+  if (v < 0.45) return 'speculative / weak';
+  if (v < 0.7) return 'plausible';
+  return 'strong';
+}
+
+export function StrengthMeter({ value }: { value: number }) {
+  const pct = Math.max(0, Math.min(1, value)) * 100;
+  const tier = value < 0.2 ? 'none' : value < 0.45 ? 'weak' : value < 0.7 ? 'mid' : 'strong';
+  return (
+    <div className={`strength strength-${tier}`} title="Overall hypothesis strength (0–1), judged on biology & evidence">
+      <span className="strength-label">Hypothesis strength</span>
+      <span className="strength-track"><span className="strength-fill" style={{ width: `${pct}%` }} /></span>
+      <span className="strength-value">{value.toFixed(2)}</span>
+      <span className="strength-tier">{strengthLabel(value)}</span>
+    </div>
+  );
+}
+
+function DispositionTable({ rows }: { rows: FeatureDisposition[] }) {
+  return (
+    <div className="dispositions">
+      <h4>Feature dispositions (ranked by model importance)</h4>
+      <table className="disp-table">
+        <thead>
+          <tr><th>#</th><th>Feature</th><th>imp</th><th>r</th><th>disposition</th><th>note</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((d) => (
+            <tr key={d.feature}>
+              <td>{d.rank}</td>
+              <td>{d.feature}</td>
+              <td>{typeof d.importance_ratio === 'number' ? d.importance_ratio.toFixed(2) : ''}</td>
+              <td>{typeof d.r === 'number' ? (d.r >= 0 ? '+' : '') + d.r.toFixed(2) : ''}</td>
+              <td><span className={`badge disp-${d.disposition}`}>{d.disposition}</span></td>
+              <td className="disp-note">{d.note ?? ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 // Progressive disclosure: a short, digestible "headline + subheadings" digest is
 // always visible; heavier supporting material (model figures, per-hypothesis
@@ -18,11 +65,17 @@ export default function ReportView({ data }: { data: CompoundData }) {
   const headline = data.headline?.trim() || (hasHyp ? hyps[0].title : '');
   const mechanisms = data.proposed_mechanisms ?? [];
   const biomarkers = data.proposed_biomarkers ?? [];
+  const dispositions = [...(data.feature_dispositions ?? [])].sort(
+    (a, b) => (a.rank ?? 999) - (b.rank ?? 999),
+  );
+  const strength = data.hypothesis_strength;
 
   return (
     <div className="report">
       {/* --- Digest (always visible) --- */}
       {headline && <p className="headline">{headline}</p>}
+
+      {typeof strength === 'number' && <StrengthMeter value={strength} />}
 
       {hasHyp ? (
         <div className="findings">
@@ -56,16 +109,19 @@ export default function ReportView({ data }: { data: CompoundData }) {
       )}
 
       {/* --- Drill-downs (collapsed) --- */}
-      {headerFigs.length > 0 && (
+      {(headerFigs.length > 0 || meta.feature_comparison || dispositions.length > 0) && (
         <details className="drill">
           <summary>Model attributions &amp; performance</summary>
           <div className="drill-body">
-            <div className="shap-row">
-              {headerFigs.map((f) => (
-                <Figure key={f.path} src={figureUrl(data.id, f.path)} caption={f.caption} />
-              ))}
-            </div>
+            {headerFigs.length > 0 && (
+              <div className="shap-row">
+                {headerFigs.map((f) => (
+                  <Figure key={f.path} src={figureUrl(data.id, f.path)} caption={f.caption} />
+                ))}
+              </div>
+            )}
             {meta.feature_comparison && <RefitBaselineTable cmp={meta.feature_comparison} />}
+            {dispositions.length > 0 && <DispositionTable rows={dispositions} />}
           </div>
         </details>
       )}

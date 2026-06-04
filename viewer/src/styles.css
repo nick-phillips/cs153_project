@@ -322,6 +322,53 @@ body {
   margin: 0.3rem 0 0.1rem;
 }
 
+/* ─── Hypothesis strength ──────────────────────────────────────────────────── */
+.strength {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0 0.8rem;
+  font-size: 0.85rem;
+}
+.strength-label { font-weight: 600; color: #374151; }
+.strength-track {
+  flex: 0 0 140px;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.strength-fill { display: block; height: 100%; border-radius: 999px; }
+.strength-value { font-variant-numeric: tabular-nums; font-weight: 700; }
+.strength-tier { color: #6b7280; }
+.strength-none .strength-fill   { background: #9ca3af; }
+.strength-weak .strength-fill   { background: #f59e0b; }
+.strength-mid .strength-fill    { background: #3b82f6; }
+.strength-strong .strength-fill { background: #16a34a; }
+
+.strength-chip.sc-none   { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
+.strength-chip.sc-weak   { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.strength-chip.sc-mid    { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.strength-chip.sc-strong { background: #dcfce7; color: #166534; border-color: #86efac; }
+
+/* ─── Feature disposition table ────────────────────────────────────────────── */
+.dispositions { margin-top: 1rem; }
+.dispositions h4 { margin: 0 0 0.4rem; }
+.disp-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.disp-table th, .disp-table td {
+  text-align: left;
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid #eef0f2;
+  vertical-align: top;
+}
+.disp-table th { color: #6b7280; font-weight: 600; }
+.disp-note { color: #6b7280; }
+.badge.disp-centered { background: #dcfce7; color: #166534; border-color: #86efac; }
+.badge.disp-supporting { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.badge.disp-uninterpretable,
+.badge.disp-likely-noise { background: #f3f4f6; color: #6b7280; border-color: #e5e7eb; }
+.badge.disp-likely-lineage-confound { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+
 /* ─── Ranked refit features (mini importance bars) ─────────────────────────── */
 .top-features {
   list-style: none;

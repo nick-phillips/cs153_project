@@ -18,6 +18,7 @@ export interface IndexEntry {
   moa: string;
   targets: string;
   has_hypothesis: boolean;
+  hypothesis_strength?: number | null;
   performance: Performance;
   divergence: string | null;
   top_hypothesis_title: string | null;
@@ -83,6 +84,15 @@ export interface Trace {
   transcript: TraceEntry[];
 }
 
+export interface FeatureDisposition {
+  feature: string;
+  rank: number;
+  importance_ratio?: number;
+  r?: number;
+  disposition: string;
+  note?: string;
+}
+
 export interface CompoundData {
   id: string;
   compound_id: string;
@@ -90,9 +100,11 @@ export interface CompoundData {
   headline?: string;
   summary: string;
   clear_hypothesis: boolean;
+  hypothesis_strength?: number;
   hypotheses: Hypothesis[];
   proposed_mechanisms: string[];
   proposed_biomarkers: string[];
+  feature_dispositions?: FeatureDisposition[];
   caveats: string[];
   trace: Trace | null;
   top_features?: TopFeature[];

@@ -109,6 +109,7 @@ def index_entry(report: dict, dir_name: str, top_features: list | None = None) -
         "moa": meta.get("moa") or "",
         "targets": meta.get("targets") or "",
         "has_hypothesis": bool(report.get("clear_hypothesis") and hyps),
+        "hypothesis_strength": report.get("hypothesis_strength"),
         "performance": {
             "refit": perf.get("selected_refit_oob_pearson"),
             "bootstrap": perf.get("bootstrap_pred_pearson"),

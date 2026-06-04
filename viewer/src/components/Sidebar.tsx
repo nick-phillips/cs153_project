@@ -86,6 +86,22 @@ export default function Sidebar() {
                 </div>
 
                 <div className="stat-row">
+                  {typeof entry.hypothesis_strength === 'number' && (
+                    <span
+                      className={`badge strength-chip ${
+                        entry.hypothesis_strength < 0.2
+                          ? 'sc-none'
+                          : entry.hypothesis_strength < 0.45
+                            ? 'sc-weak'
+                            : entry.hypothesis_strength < 0.7
+                              ? 'sc-mid'
+                              : 'sc-strong'
+                      }`}
+                      title="Hypothesis strength (0–1)"
+                    >
+                      strength {entry.hypothesis_strength.toFixed(2)}
+                    </span>
+                  )}
                   <PerfBadges perf={entry.performance} />
                   {entry.divergence && (
                     <span className={`badge div-${entry.divergence}`}>
