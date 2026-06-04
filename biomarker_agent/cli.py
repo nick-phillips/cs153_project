@@ -127,9 +127,9 @@ def main(argv=None):
     p.add_argument("--model", default=None,
                    help="Model id; defaults per provider")
     p.add_argument("--literature", choices=["pubmed", "paperclip"], default="pubmed")
-    p.add_argument("--max-tool-calls", type=int, default=18,
-                   help="Tool-call budget per compound (kept low for parsimony; "
-                        "single-hypothesis runs rarely need more)")
+    p.add_argument("--max-tool-calls", type=int, default=20,
+                   help="Hard tool-call backstop per compound (evidence lookups are budgeted "
+                        "tighter in-prompt; the extra headroom is for supporting figures)")
     args = p.parse_args(argv)
 
     required_key = "ANTHROPIC_API_KEY" if args.provider == "anthropic" else "OPENROUTER_API_KEY"

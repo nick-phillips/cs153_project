@@ -35,6 +35,12 @@ def render_markdown(payload: dict, compound_id: str, meta: dict | None = None) -
         lines.append(f"> **{headline}**")
         lines.append("")
 
+    strength = payload.get("hypothesis_strength")
+    if isinstance(strength, (int, float)):
+        lines.append(f"**Hypothesis strength:** {strength:.2f} / 1.00  "
+                     "_(0 = no clear mechanism/biomarker; 1 = definite, obvious biomarker & mechanism)_")
+        lines.append("")
+
     # --- Header: drug context + deterministic model performance ---
     drug = meta.get("drug_name")
     moa = meta.get("moa")
@@ -105,6 +111,24 @@ def render_markdown(payload: dict, compound_id: str, meta: dict | None = None) -
     else:
         lines.append("_No clear biomarker hypothesis is supported by the evidence._")
     lines.append("")
+
+    # --- Per-feature disposition table (every passing feature accounted for) ---
+    disps = payload.get("feature_dispositions") or []
+    if disps:
+        ordered = sorted(disps, key=lambda d: d.get("rank", 999))
+        lines.append("### Feature dispositions (ranked by model importance)")
+        lines.append("| # | Feature | imp_ratio | r | Disposition | Note |")
+        lines.append("| --- | --- | --- | --- | --- | --- |")
+        for d in ordered:
+            ratio = d.get("importance_ratio")
+            ratio_s = f"{ratio:.2f}" if isinstance(ratio, (int, float)) else ""
+            r = d.get("r")
+            r_s = f"{r:+.2f}" if isinstance(r, (int, float)) else ""
+            note = (d.get("note") or "").replace("|", "\\|")
+            lines.append(
+                f"| {d.get('rank', '')} | {d.get('feature', '')} | {ratio_s} | {r_s} "
+                f"| {d.get('disposition', '')} | {note} |")
+        lines.append("")
 
     # --- Supporting evidence ---
     hyps = sorted(payload.get("hypotheses", []), key=lambda x: x.get("rank", 999))

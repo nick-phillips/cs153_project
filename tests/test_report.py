@@ -125,6 +125,48 @@ def test_report_schema_has_figures():
     assert "figures" not in hyp["required"]  # optional
 
 
+def test_render_feature_dispositions_table(tmp_path):
+    payload = {
+        "summary": "s", "clear_hypothesis": True, "hypotheses": [],
+        "feature_dispositions": [
+            {"feature": "GE_LOW", "rank": 2, "importance_ratio": 0.25, "r": 0.31,
+             "disposition": "uninterpretable", "note": "no literature"},
+            {"feature": "GE_TOP", "rank": 1, "importance_ratio": 1.0, "r": -0.20,
+             "disposition": "centered", "note": "on-MOA target"},
+        ],
+    }
+    out = report.write_report(payload, tmp_path / "i", compound_id="BRD:X", meta={})
+    md = out["markdown"].read_text()
+    assert "### Feature dispositions (ranked by model importance)" in md
+    # rank-1 row renders before rank-2 (sorted by rank)
+    assert md.index("GE_TOP") < md.index("GE_LOW")
+    assert "centered" in md and "uninterpretable" in md
+    assert "+0.31" in md and "-0.20" in md  # signed r formatting
+
+
+def test_report_schema_has_feature_dispositions():
+    from biomarker_agent import prompts
+    props = prompts.REPORT_TOOL["input_schema"]["properties"]
+    assert "feature_dispositions" in props
+    item = props["feature_dispositions"]["items"]
+    assert set(item["required"]) == {"feature", "rank", "disposition"}
+
+
+def test_render_hypothesis_strength(tmp_path):
+    payload = {"summary": "s", "clear_hypothesis": True, "hypothesis_strength": 0.82,
+               "hypotheses": []}
+    out = report.write_report(payload, tmp_path / "i", compound_id="BRD:X", meta={})
+    md = out["markdown"].read_text()
+    assert "**Hypothesis strength:** 0.82 / 1.00" in md
+
+
+def test_report_schema_requires_hypothesis_strength():
+    from biomarker_agent import prompts
+    schema = prompts.REPORT_TOOL["input_schema"]
+    assert "hypothesis_strength" in schema["properties"]
+    assert "hypothesis_strength" in schema["required"]
+
+
 def test_render_feature_comparison(tmp_path):
     payload = {"summary": "s", "clear_hypothesis": True, "hypotheses": []}
     meta = {"feature_comparison": {
