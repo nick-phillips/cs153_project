@@ -18,7 +18,7 @@ import json
 import shutil
 from pathlib import Path
 
-from .viewer_figures import response_histogram
+from .viewer_figures import pred_vs_actual_plot, response_histogram
 
 TOP_FEATURES = 5  # ranked refit features shown per compound card
 BASELINE_SHAP = "shap_summary.png"
@@ -162,7 +162,7 @@ def build(results_dir, out_dir, source_dir=None, responses_file=None) -> dict:
                 shutil.copy2(png, fig_dest / png.name)
 
         meta = compound.setdefault("meta", {})
-        header_figs = meta.get("header_figures") or []
+        header_figs = list(meta.get("header_figures") or [])
 
         # Swap downscaled SHAP panels for full-resolution originals (crisp expand).
         if source_dir:
@@ -173,15 +173,27 @@ def build(results_dir, out_dir, source_dir=None, responses_file=None) -> dict:
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(full, dest)
 
-        # Ground-truth toxicity histogram alongside the SHAP panels.
+        # Top row of the 2x2 header grid: refit predicted-vs-actual + the
+        # ground-truth toxicity distribution (SHAP panels go on the bottom row).
+        extras: list = []
+        if source_dir:
+            pva_csv = (Path(source_dir) / sub.name / "refract" / "significant"
+                       / "pred_vs_actual.csv")
+            pva_rel = "figures/pred_vs_actual.png"
+            n = pred_vs_actual_plot(pva_csv, out_dir / sub.name / pva_rel)
+            if n:
+                extras.append({"path": pva_rel,
+                               "caption": f"Predicted vs actual — selected-refit model "
+                                          f"(n={n} cell lines)"})
         if responses_file:
             hist_rel = "figures/response_hist.png"
             n = response_histogram(responses_file, compound_id, out_dir / sub.name / hist_rel)
             if n:
-                meta["header_figures"] = [*header_figs, {
-                    "path": hist_rel,
-                    "caption": f"Ground-truth response (toxicity) distribution — n={n} cell lines",
-                }]
+                extras.append({"path": hist_rel,
+                               "caption": f"Ground-truth response (toxicity) distribution "
+                                          f"— n={n} cell lines"})
+        if extras:
+            meta["header_figures"] = [*extras, *header_figs]
 
         (out_dir / f"{sub.name}.json").write_text(json.dumps(compound, indent=2))
 

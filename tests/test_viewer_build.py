@@ -11,7 +11,7 @@ from biomarker_agent.viewer_build import (
     parse_gene,
     ranked_refit_features,
 )
-from biomarker_agent.viewer_figures import response_histogram
+from biomarker_agent.viewer_figures import pred_vs_actual_plot, response_histogram
 
 
 def test_parse_gene_strips_class_prefix():
@@ -196,3 +196,18 @@ def test_response_histogram(tmp_path):
     assert n == 4  # one NaN dropped
     assert out_png.exists() and out_png.stat().st_size > 0
     assert response_histogram(pkl, "BRD:missing", out_png) is None
+
+
+def test_pred_vs_actual_plot(tmp_path):
+    pytest.importorskip("pandas")
+    pytest.importorskip("matplotlib")
+    csv = tmp_path / "pred_vs_actual.csv"
+    csv.write_text(
+        "sample,observed,predicted\n"
+        "ACH-1,0.1,0.2\nACH-2,0.5,0.4\nACH-3,-0.3,-0.1\nACH-4,0.8,0.6\n"
+    )
+    out_png = tmp_path / "fig" / "pva.png"
+    n = pred_vs_actual_plot(csv, out_png)
+    assert n == 4
+    assert out_png.exists() and out_png.stat().st_size > 0
+    assert pred_vs_actual_plot(tmp_path / "missing.csv", out_png) is None
